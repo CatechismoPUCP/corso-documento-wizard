@@ -119,48 +119,68 @@ const AutoStep1CourseTable = ({ data, updateData, onNext }: AutoStep1CourseTable
       return;
     }
 
+    // Parsa la riga principale con i dati del corso
     const dataLine = lines[dataLineIndex];
-    const columns = dataLine.split('\t').map(col => col.trim());
+    const allColumns = dataLine.split('\t');
+    
+    console.log('Riga dati completa:', dataLine);
+    console.log('Tutte le colonne:', allColumns.length, allColumns);
 
-    console.log('Colonne trovate:', columns.length, columns);
-
-    if (columns.length < 4) {
+    if (allColumns.length < 4) {
       alert('Tabella incompleta. Assicurati che contenga almeno le colonne: Corso, ID Corso, ID Sezione, Quando.');
       return;
     }
 
-    const courseName = columns[0] || '';
-    const projectId = columns[1] || '';
-    const sectionId = columns[2] || '';
+    const courseName = allColumns[0] || '';
+    const projectId = allColumns[1] || '';
+    const sectionId = allColumns[2] || '';
     
-    // Raccogli tutte le righe del calendario dalla riga successiva fino alla fine o fino alla prossima riga con dati
-    let scheduleLines = [];
-    for (let i = dataLineIndex + 1; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (line && line.match(/^\d{2}\/\d{2}\/\d{4}/)) {
-        scheduleLines.push(line);
-      } else if (line && !line.match(/^\d{2}\/\d{2}\/\d{4}/) && scheduleLines.length > 0) {
-        // Se troviamo una riga che non è una data e abbiamo già raccolto date, 
-        // potrebbe essere la riga con il provider e altre info
-        const extraColumns = line.split('\t');
-        if (extraColumns.length > 0 && !columns[4]) {
-          // Se non abbiamo ancora il provider, prendiamolo da qui
-          columns[4] = extraColumns[0]; // Provider/Docente
-        }
-        break;
+    // Il Provider (docente) dovrebbe essere nella colonna 4 (index 4) secondo la struttura
+    // Corso | ID Corso | ID Sezione | Quando | Provider | ...
+    let mainTeacher = '';
+    let rendicontabileHours = 0;
+    
+    // Cerca il provider e le ore rendicontabili
+    if (allColumns.length >= 5) {
+      mainTeacher = allColumns[4] || ''; // Provider
+    }
+    
+    // Le ore rendicontabili sono nella colonna "Rendicontabile" (index 9)
+    // Corso | ID Corso | ID Sezione | Quando | Provider | Tipo di sede | # Sessioni | Ore Totali | Durata | Rendicontabile | ...
+    if (allColumns.length >= 10) {
+      const rendicontabileText = allColumns[9] || '';
+      const hoursMatch = rendicontabileText.match(/(\d+)/);
+      if (hoursMatch) {
+        rendicontabileHours = parseInt(hoursMatch[1]);
       }
     }
 
-    // Se non abbiamo trovato il provider nella riga separata, potrebbe essere nella stessa riga dei dati
-    const mainTeacher = columns[4] || '';
+    // Raccogli tutte le date dalla colonna "Quando" (potrebbero essere su più righe)
+    let scheduleText = allColumns[3] || '';
     
-    const scheduleText = scheduleLines.join('\n');
+    // Se ci sono righe aggiuntive con solo date, aggiungile
+    for (let i = dataLineIndex + 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (line && line.match(/^\d{2}\/\d{2}\/\d{4}/)) {
+        scheduleText += '\n' + line;
+      } else {
+        break;
+      }
+    }
+    
     console.log('Calendario estratto:', scheduleText);
-    console.log('Docente:', mainTeacher);
+    console.log('Docente trovato:', mainTeacher);
+    console.log('Ore rendicontabili:', rendicontabileHours);
 
     // Parse del calendario dalle date/orari
     const lessons = parseScheduleText(scheduleText);
     const parsedCalendar = calculateParsedCalendar(lessons);
+    
+    // Usa le ore rendicontabili se disponibili, altrimenti quelle calcolate
+    if (rendicontabileHours > 0) {
+      parsedCalendar.totalHours = rendicontabileHours;
+      parsedCalendar.presenceHours = rendicontabileHours;
+    }
 
     // Genera il formato calendario testuale per compatibilità
     const calendar = lessons.map(lesson => 
@@ -180,7 +200,7 @@ const AutoStep1CourseTable = ({ data, updateData, onNext }: AutoStep1CourseTable
     });
 
     setIsParsed(true);
-    console.log('Dati corso parsati:', { courseName, projectId, sectionId, mainTeacher, totalLessons: lessons.length });
+    console.log('Dati corso parsati:', { courseName, projectId, sectionId, mainTeacher, totalLessons: lessons.length, totalHours: parsedCalendar.totalHours });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
