@@ -103,20 +103,60 @@ const AutoStep1CourseTable = ({ data, updateData, onNext }: AutoStep1CourseTable
       return;
     }
 
-    // Assumiamo che la prima riga sia l'header e la seconda i dati
-    const dataLine = lines[1];
+    // Trova la riga con i dati del corso (quella che inizia con il nome del corso)
+    let dataLineIndex = -1;
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i];
+      // Controlla se la riga contiene i dati del corso (non dovrebbe iniziare con una data)
+      if (!line.match(/^\d{2}\/\d{2}\/\d{4}/)) {
+        dataLineIndex = i;
+        break;
+      }
+    }
+
+    if (dataLineIndex === -1) {
+      alert('Non riesco a trovare la riga con i dati del corso. Verifica il formato della tabella.');
+      return;
+    }
+
+    const dataLine = lines[dataLineIndex];
     const columns = dataLine.split('\t').map(col => col.trim());
 
-    if (columns.length < 13) {
-      alert('Tabella incompleta. Assicurati che contenga tutte le colonne necessarie.');
+    console.log('Colonne trovate:', columns.length, columns);
+
+    if (columns.length < 4) {
+      alert('Tabella incompleta. Assicurati che contenga almeno le colonne: Corso, ID Corso, ID Sezione, Quando.');
       return;
     }
 
     const courseName = columns[0] || '';
     const projectId = columns[1] || '';
     const sectionId = columns[2] || '';
-    const scheduleText = columns[3] || '';
+    
+    // Raccogli tutte le righe del calendario dalla riga successiva fino alla fine o fino alla prossima riga con dati
+    let scheduleLines = [];
+    for (let i = dataLineIndex + 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (line && line.match(/^\d{2}\/\d{2}\/\d{4}/)) {
+        scheduleLines.push(line);
+      } else if (line && !line.match(/^\d{2}\/\d{2}\/\d{4}/) && scheduleLines.length > 0) {
+        // Se troviamo una riga che non è una data e abbiamo già raccolto date, 
+        // potrebbe essere la riga con il provider e altre info
+        const extraColumns = line.split('\t');
+        if (extraColumns.length > 0 && !columns[4]) {
+          // Se non abbiamo ancora il provider, prendiamolo da qui
+          columns[4] = extraColumns[0]; // Provider/Docente
+        }
+        break;
+      }
+    }
+
+    // Se non abbiamo trovato il provider nella riga separata, potrebbe essere nella stessa riga dei dati
     const mainTeacher = columns[4] || '';
+    
+    const scheduleText = scheduleLines.join('\n');
+    console.log('Calendario estratto:', scheduleText);
+    console.log('Docente:', mainTeacher);
 
     // Parse del calendario dalle date/orari
     const lessons = parseScheduleText(scheduleText);
