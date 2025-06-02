@@ -159,6 +159,9 @@ const Step3Summary = ({ data, updateData, onNext, onPrev }: Step3SummaryProps) =
                   <span className="font-semibold">Ore a Distanza:</span>
                   <p className="text-lg font-semibold text-green-600">{data.parsedCalendar.onlineHours.toFixed(1)}h</p>
                 </div>
+                <div className="text-xs text-gray-600 mt-2 p-2 bg-yellow-50 rounded">
+                  <strong>Nota:</strong> La pausa pranzo (13:00-14:00) è automaticamente esclusa dal calcolo delle ore per tutte le lezioni.
+                </div>
               </CardContent>
             </Card>
 
@@ -230,7 +233,7 @@ const Step3Summary = ({ data, updateData, onNext, onPrev }: Step3SummaryProps) =
                     </code>
                     <p className="text-sm text-blue-700 mt-2">
                       Modalità: "Ufficio" per presenza, "Online" per distanza<br/>
-                      <strong>Nota:</strong> La pausa pranzo (13:00-14:00) viene automaticamente esclusa dalle ore in presenza.
+                      <strong>Nota:</strong> La pausa pranzo (13:00-14:00) viene automaticamente esclusa da tutte le lezioni.
                     </p>
                   </div>
                   
