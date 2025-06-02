@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -190,6 +191,7 @@ const Step2Participants = ({ data, updateData, onNext, onPrev }: Step2Participan
                       <th className="text-left p-2">CF</th>
                       <th className="text-left p-2">Cellulare</th>
                       <th className="text-left p-2">Email</th>
+                      <th className="text-left p-2">Case Manager</th>
                       <th className="text-left p-2">Benefits</th>
                       <th className="text-left p-2 w-20">Ordine</th>
                     </tr>
@@ -203,6 +205,7 @@ const Step2Participants = ({ data, updateData, onNext, onPrev }: Step2Participan
                         <td className="p-2 font-mono text-xs">{participant.codiceFiscale}</td>
                         <td className="p-2 text-xs">{participant.cellulare}</td>
                         <td className="p-2 text-xs">{participant.email}</td>
+                        <td className="p-2 text-sm">{participant.caseManager}</td>
                         <td className="p-2">
                           <span className={`px-2 py-1 rounded text-xs ${
                             participant.benefits === 'SI' 
@@ -261,3 +264,4 @@ const Step2Participants = ({ data, updateData, onNext, onPrev }: Step2Participan
 };
 
 export default Step2Participants;
+
