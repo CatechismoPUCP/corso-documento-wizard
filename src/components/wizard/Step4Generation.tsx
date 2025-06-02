@@ -29,14 +29,17 @@ const Step4Generation = ({ data, onReset }: Step4GenerationProps) => {
         projectId: data.projectId,
         sectionId: data.sectionId,
         courseName: data.courseName,
-        location: data.location,
+        location: data.location, // Now properly included
         mainTeacher: data.mainTeacher,
-        teacherCF: data.teacherCF
+        teacherCF: data.teacherCF, // Now properly included
+        operation: data.operation
       },
       calendar: data.parsedCalendar,
       participants: data.participants,
       generatedAt: new Date().toISOString()
     };
+
+    console.log('Exporting complete data:', sampleData);
 
     const blob = new Blob([JSON.stringify(sampleData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
