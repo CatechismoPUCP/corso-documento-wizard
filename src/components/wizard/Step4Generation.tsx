@@ -1,8 +1,7 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Calendar, RotateCcw, Download } from "lucide-react";
+import { FileText, Calendar, RotateCcw, Download, Share2, Users, ExternalLink } from "lucide-react";
 import { CourseData } from '@/types/course';
 import * as XLSX from 'xlsx';
 
@@ -58,6 +57,109 @@ const Step4Generation = ({ data, onReset }: Step4GenerationProps) => {
       console.error('Error generating Excel calendar:', error);
       alert('Errore durante la generazione del calendario Excel.');
     }
+  };
+
+  const generateGoogleCalendarUrl = () => {
+    const lessons = data.parsedCalendar.lessons;
+    if (lessons.length === 0) {
+      alert('Nessuna lezione trovata per generare il link Google Calendar.');
+      return;
+    }
+
+    // Create Google Calendar URL for the first lesson as example
+    const firstLesson = lessons[0];
+    const [day, month, year] = firstLesson.date.split('/');
+    const startDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    
+    // Format dates for Google Calendar
+    const formatDateForGoogle = (date: Date, time: string) => {
+      const [hours, minutes] = time.split(':');
+      const newDate = new Date(date);
+      newDate.setHours(parseInt(hours), parseInt(minutes));
+      return newDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    };
+
+    const startDateTime = formatDateForGoogle(startDate, firstLesson.startTime);
+    const endDateTime = formatDateForGoogle(startDate, firstLesson.endTime);
+    
+    const title = encodeURIComponent(`${data.courseName} - ${firstLesson.subject}`);
+    const details = encodeURIComponent(`Corso: ${data.courseName}\nDocente: ${data.mainTeacher}\nModalità: ${firstLesson.location}`);
+    const location = encodeURIComponent(firstLesson.location === 'Ufficio' ? data.location || 'In presenza' : 'Online');
+
+    const googleUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startDateTime}/${endDateTime}&details=${details}&location=${location}`;
+    
+    window.open(googleUrl, '_blank');
+  };
+
+  const generateTeamsUrl = () => {
+    const lessons = data.parsedCalendar.lessons;
+    if (lessons.length === 0) {
+      alert('Nessuna lezione trovata per generare il link Teams.');
+      return;
+    }
+
+    const firstLesson = lessons[0];
+    const [day, month, year] = firstLesson.date.split('/');
+    const startDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    
+    const title = encodeURIComponent(`${data.courseName} - ${firstLesson.subject}`);
+    const startTime = encodeURIComponent(`${firstLesson.date} ${firstLesson.startTime}`);
+    const endTime = encodeURIComponent(`${firstLesson.date} ${firstLesson.endTime}`);
+    
+    // Microsoft Teams meeting URL format
+    const teamsUrl = `https://teams.microsoft.com/l/meeting/new?subject=${title}&startTime=${startTime}&endTime=${endTime}`;
+    
+    window.open(teamsUrl, '_blank');
+  };
+
+  const downloadICalendar = () => {
+    const lessons = data.parsedCalendar.lessons;
+    if (lessons.length === 0) {
+      alert('Nessuna lezione trovata per generare il file calendario.');
+      return;
+    }
+
+    // Generate iCal format
+    let icalContent = 'BEGIN:VCALENDAR\n';
+    icalContent += 'VERSION:2.0\n';
+    icalContent += 'PRODID:-//Lovable//Course Calendar//EN\n';
+    icalContent += 'CALSCALE:GREGORIAN\n';
+
+    lessons.forEach((lesson, index) => {
+      const [day, month, year] = lesson.date.split('/');
+      const startDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      
+      const formatDateForICal = (date: Date, time: string) => {
+        const [hours, minutes] = time.split(':');
+        const newDate = new Date(date);
+        newDate.setHours(parseInt(hours), parseInt(minutes));
+        return newDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+      };
+
+      const startDateTime = formatDateForICal(startDate, lesson.startTime);
+      const endDateTime = formatDateForICal(startDate, lesson.endTime);
+      const uid = `lesson-${data.sectionId}-${index}@course-calendar.com`;
+      
+      icalContent += 'BEGIN:VEVENT\n';
+      icalContent += `UID:${uid}\n`;
+      icalContent += `DTSTART:${startDateTime}\n`;
+      icalContent += `DTEND:${endDateTime}\n`;
+      icalContent += `SUMMARY:${data.courseName} - ${lesson.subject}\n`;
+      icalContent += `DESCRIPTION:Corso: ${data.courseName}\\nDocente: ${data.mainTeacher}\\nModalità: ${lesson.location}\n`;
+      icalContent += `LOCATION:${lesson.location === 'Ufficio' ? (data.location || 'In presenza') : 'Online'}\n`;
+      icalContent += 'END:VEVENT\n';
+    });
+
+    icalContent += 'END:VCALENDAR';
+
+    // Download the file
+    const blob = new Blob([icalContent], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `calendario_${data.sectionId}.ics`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const generateScheduleExcelData = () => {
@@ -132,9 +234,9 @@ const Step4Generation = ({ data, onReset }: Step4GenerationProps) => {
         projectId: data.projectId,
         sectionId: data.sectionId,
         courseName: data.courseName,
-        location: data.location, // Now properly included
+        location: data.location,
         mainTeacher: data.mainTeacher,
-        teacherCF: data.teacherCF, // Now properly included
+        teacherCF: data.teacherCF,
         operation: data.operation
       },
       calendar: data.parsedCalendar,
@@ -157,7 +259,7 @@ const Step4Generation = ({ data, onReset }: Step4GenerationProps) => {
     <Card>
       <CardHeader>
         <CardTitle>Generazione Documenti</CardTitle>
-        <p className="text-gray-600">Seleziona il tipo di documento da generare</p>
+        <p className="text-gray-600">Seleziona il tipo di documento da generare o sincronizza con i tuoi servizi preferiti</p>
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
@@ -220,6 +322,73 @@ const Step4Generation = ({ data, onReset }: Step4GenerationProps) => {
                 </Button>
               </CardContent>
             </Card>
+          </div>
+
+          {/* Calendar Integration Section */}
+          <div className="border-t pt-6">
+            <h3 className="text-lg font-semibold mb-4 flex items-center">
+              <Share2 className="w-5 h-5 mr-2" />
+              Sincronizzazione Calendario
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Sincronizza facilmente il calendario del corso con i tuoi servizi preferiti o condividilo con gli studenti.
+            </p>
+            
+            <div className="grid md:grid-cols-3 gap-4">
+              <Card className="border-2 hover:border-red-300 transition-colors">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center text-red-600 text-base">
+                    <Calendar className="w-5 h-5 mr-2" />
+                    Google Calendar
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xs text-gray-600 mb-3">
+                    Aggiungi direttamente al tuo Google Calendar e condividi con gli studenti.
+                  </p>
+                  <Button onClick={generateGoogleCalendarUrl} className="w-full bg-red-600 hover:bg-red-700 text-sm">
+                    <ExternalLink className="w-3 h-3 mr-2" />
+                    Apri in Google Calendar
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="border-2 hover:border-purple-300 transition-colors">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center text-purple-600 text-base">
+                    <Users className="w-5 h-5 mr-2" />
+                    Microsoft Teams
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xs text-gray-600 mb-3">
+                    Crea meeting Teams per le lezioni online e organizza la classe.
+                  </p>
+                  <Button onClick={generateTeamsUrl} className="w-full bg-purple-600 hover:bg-purple-700 text-sm">
+                    <ExternalLink className="w-3 h-3 mr-2" />
+                    Crea Meeting Teams
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="border-2 hover:border-indigo-300 transition-colors">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center text-indigo-600 text-base">
+                    <Download className="w-5 h-5 mr-2" />
+                    File Calendario (.ics)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xs text-gray-600 mb-3">
+                    Scarica file calendario universale compatibile con tutti i client.
+                  </p>
+                  <Button onClick={downloadICalendar} variant="outline" className="w-full border-indigo-300 text-indigo-600 hover:bg-indigo-50 text-sm">
+                    <Download className="w-3 h-3 mr-2" />
+                    Scarica File .ics
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
           </div>
 
           {/* Sample Data Export */}
