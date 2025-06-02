@@ -1,11 +1,9 @@
-
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { ChevronLeft, ChevronRight, Users, Upload, ArrowUp, ArrowDown } from "lucide-react";
+import { ChevronLeft, ChevronRight, Users, Upload, ArrowUp, ArrowDown, GripVertical } from "lucide-react";
 import { CourseData, Participant } from '@/types/course';
 
 interface Step2ParticipantsProps {
@@ -17,6 +15,7 @@ interface Step2ParticipantsProps {
 
 const Step2Participants = ({ data, updateData, onNext, onPrev }: Step2ParticipantsProps) => {
   const [participantsText, setParticipantsText] = useState('');
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
   const parseParticipants = (text: string): Participant[] => {
     console.log('Starting to parse participants text:', text);
@@ -114,6 +113,47 @@ const Step2Participants = ({ data, updateData, onNext, onPrev }: Step2Participan
     }
   };
 
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', '');
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    
+    if (draggedIndex === null || draggedIndex === dropIndex) {
+      setDraggedIndex(null);
+      return;
+    }
+
+    const newParticipants = [...data.participants];
+    const draggedParticipant = newParticipants[draggedIndex];
+    
+    // Remove dragged participant
+    newParticipants.splice(draggedIndex, 1);
+    
+    // Insert at new position
+    newParticipants.splice(dropIndex, 0, draggedParticipant);
+    
+    // Update IDs to maintain order
+    newParticipants.forEach((participant, idx) => {
+      participant.id = idx + 1;
+    });
+    
+    updateData({ participants: newParticipants });
+    setDraggedIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     console.log('Submitting with participants:', data.participants.length);
@@ -177,7 +217,7 @@ const Step2Participants = ({ data, updateData, onNext, onPrev }: Step2Participan
               
               <div className="bg-yellow-50 p-3 rounded mb-4">
                 <p className="text-sm text-yellow-800 font-medium">
-                  ⚡ Ordina i partecipanti: L'ordine qui determinerà l'ordine nei documenti finali
+                  ⚡ Ordina i partecipanti: Usa i pulsanti freccia o trascina le righe per riordinare
                 </p>
               </div>
 
@@ -185,6 +225,9 @@ const Step2Participants = ({ data, updateData, onNext, onPrev }: Step2Participan
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 bg-white">
                     <tr className="border-b">
+                      <th className="text-left p-2 w-8">
+                        <GripVertical className="w-4 h-4 text-gray-400" />
+                      </th>
                       <th className="text-left p-2 w-12">#</th>
                       <th className="text-left p-2">Cognome</th>
                       <th className="text-left p-2">Nome</th>
@@ -198,7 +241,20 @@ const Step2Participants = ({ data, updateData, onNext, onPrev }: Step2Participan
                   </thead>
                   <tbody>
                     {data.participants.map((participant, index) => (
-                      <tr key={participant.id} className="border-b hover:bg-gray-50">
+                      <tr 
+                        key={`${participant.id}-${index}`}
+                        className={`border-b hover:bg-gray-50 cursor-move ${
+                          draggedIndex === index ? 'opacity-50' : ''
+                        }`}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, index)}
+                        onDragOver={handleDragOver}
+                        onDrop={(e) => handleDrop(e, index)}
+                        onDragEnd={handleDragEnd}
+                      >
+                        <td className="p-2">
+                          <GripVertical className="w-4 h-4 text-gray-400 cursor-grab active:cursor-grabbing" />
+                        </td>
                         <td className="p-2 font-bold">{index + 1}</td>
                         <td className="p-2">{participant.cognome}</td>
                         <td className="p-2">{participant.nome}</td>
@@ -264,4 +320,3 @@ const Step2Participants = ({ data, updateData, onNext, onPrev }: Step2Participan
 };
 
 export default Step2Participants;
-
