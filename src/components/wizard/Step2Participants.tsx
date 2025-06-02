@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,13 +22,14 @@ const Step2Participants = ({ data, updateData, onNext, onPrev }: Step2Participan
     const lines = text.trim().split('\n');
     const participants: Participant[] = [];
     
-    // Skip header line if present
+    // Skip header line and footer line
     const dataLines = lines.filter(line => {
       const trimmed = line.trim();
       return trimmed && 
-             !trimmed.toLowerCase().includes('cognome') && 
-             !trimmed.toLowerCase().includes('n.') &&
-             !trimmed.toLowerCase().includes('codice fiscale');
+             !trimmed.toLowerCase().includes('id') &&
+             !trimmed.toLowerCase().includes('codice fiscale') &&
+             !trimmed.toLowerCase().includes('nome') &&
+             !trimmed.toLowerCase().includes('righe visualizzata');
     });
     
     console.log('Data lines to process:', dataLines.length);
@@ -36,26 +38,34 @@ const Step2Participants = ({ data, updateData, onNext, onPrev }: Step2Participan
       const columns = line.split('\t').map(col => col.trim());
       console.log(`Processing line ${index + 1}:`, columns);
       
-      if (columns.length >= 15) { // Minimum required columns
+      // Your table format has 13 columns:
+      // ID | Codice Fiscale | Nome | Telefono/i | Cellulare | Indirizzo email | Programma | Ufficio | Case Manager | Benefits | Presenza dell'utente | Dettagli | Frequenza
+      if (columns.length >= 10) { // Minimum required columns for your format
+        // Extract nome and cognome from the combined name field (column 2)
+        const fullName = columns[2] || '';
+        const nameParts = fullName.trim().split(' ');
+        const nome = nameParts[0] || '';
+        const cognome = nameParts.slice(1).join(' ') || '';
+        
         const participant: Participant = {
           id: index + 1,
-          cognome: columns[2] || '',
-          nome: columns[3] || '',
-          genere: columns[4] || '',
-          dataNascita: columns[5] || '',
-          comuneNascita: columns[6] || '',
-          provNascita: columns[7] || '',
-          cittadinanza: columns[8] || '',
+          cognome: cognome,
+          nome: nome,
+          genere: '', // Not available in this format
+          dataNascita: '', // Not available in this format
+          comuneNascita: '', // Not available in this format
+          provNascita: '', // Not available in this format
+          cittadinanza: '', // Not available in this format
           codiceFiscale: columns[1] || '',
-          titoloStudio: columns[9] || '',
-          cellulare: columns[10] || '',
-          email: columns[11] || '',
-          comuneDomicilio: columns[12] || '',
-          provDomicilio: columns[13] || '',
-          indirizzo: columns[14] || '',
-          cap: columns[15] || '',
-          benefits: (columns[16] === 'SI' || columns[16] === 'Yes' || columns[16] === 'Sì' || columns[16] === 'si') ? 'SI' : 'NO',
-          caseManager: columns[17] || ''
+          titoloStudio: '', // Not available in this format
+          cellulare: columns[4] || '', // Cellulare column
+          email: columns[5] || '', // Indirizzo email column
+          comuneDomicilio: '', // Not available in this format
+          provDomicilio: '', // Not available in this format
+          indirizzo: '', // Not available in this format
+          cap: '', // Not available in this format
+          benefits: (columns[9] === 'Sì' || columns[9] === 'Si' || columns[9] === 'SI' || columns[9] === 'Yes') ? 'SI' : 'NO', // Benefits column
+          caseManager: columns[8] || '' // Case Manager column
         };
         
         console.log(`Created participant ${index + 1}:`, participant);
@@ -129,9 +139,8 @@ const Step2Participants = ({ data, updateData, onNext, onPrev }: Step2Participan
               Copia e incolla la tabella con le colonne separate da TAB nel seguente ordine:
             </p>
             <code className="text-xs bg-white p-2 rounded block">
-              N. | Codice Fiscale | COGNOME | NOME | Genere | Data nascita | Comune nascita | Prov nascita | 
-              Cittadinanza | Titolo di studio | Cellulare | Mail | 
-              Comune domicilio | Prov domicilio | Via e n. civico | CAP | Benefits | Case Manager
+              ID | Codice Fiscale | Nome | Telefono/i | Cellulare | Indirizzo email | 
+              Programma | Ufficio | Case Manager | Benefits | Presenza dell'utente | Dettagli | Frequenza
             </code>
           </div>
 
