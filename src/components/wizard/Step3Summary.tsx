@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ChevronLeft, ChevronRight, Calendar, Clock, Users, MapPin, Edit, Lock, Unlock } from "lucide-react";
 import { CourseData, ParsedCalendar, Lesson } from '@/types/course';
 import { parseScheduleText, calculateParsedCalendar, calculateLessonHours } from '@/utils/courseTableParser';
-import StudentsContactTable from './StudentsContactTable';
 
 interface Step3SummaryProps {
   data: CourseData;
@@ -342,12 +342,6 @@ const Step3Summary = ({ data, updateData, onNext, onPrev }: Step3SummaryProps) =
           </form>
         </CardContent>
       </Card>
-      
-      {/* New Students Contact Table */}
-      <StudentsContactTable 
-        participants={data.participants} 
-        courseName={data.courseName}
-      />
     </div>
   );
 };
