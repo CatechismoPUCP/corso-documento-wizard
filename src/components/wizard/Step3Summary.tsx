@@ -5,9 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronLeft, ChevronRight, Calendar, Clock, Users, MapPin, Edit, Lock, Unlock } from "lucide-react";
-import { CourseData, ParsedCalendar } from '@/types/course';
-import { parseScheduleText, calculateParsedCalendar } from '@/utils/courseTableParser';
+import { CourseData, ParsedCalendar, Lesson } from '@/types/course';
+import { parseScheduleText, calculateParsedCalendar, calculateLessonHours } from '@/utils/courseTableParser';
 
 interface Step3SummaryProps {
   data: CourseData;
@@ -19,6 +20,7 @@ interface Step3SummaryProps {
 const Step3Summary = ({ data, updateData, onNext, onPrev }: Step3SummaryProps) => {
   const [isCalendarLocked, setIsCalendarLocked] = useState(true);
   const [isParticipantsLocked, setIsParticipantsLocked] = useState(true);
+  const [isLessonsLocked, setIsLessonsLocked] = useState(true);
   const [editableCalendar, setEditableCalendar] = useState(data.calendar);
 
   const parseCalendar = (calendarText: string): ParsedCalendar => {
@@ -31,7 +33,7 @@ const Step3Summary = ({ data, updateData, onNext, onPrev }: Step3SummaryProps) =
       const parsed = parseCalendar(data.calendar);
       updateData({ parsedCalendar: parsed });
     }
-  }, []); // Rimuovo data.calendar dalle dipendenze per evitare loop infinito
+  }, []);
 
   const handleCalendarUpdate = () => {
     const parsed = parseCalendar(editableCalendar);
@@ -40,6 +42,23 @@ const Step3Summary = ({ data, updateData, onNext, onPrev }: Step3SummaryProps) =
       parsedCalendar: parsed 
     });
     setIsCalendarLocked(true);
+  };
+
+  const handleLessonModalityChange = (lessonIndex: number, newModality: 'Ufficio' | 'Online') => {
+    const updatedLessons = [...data.parsedCalendar.lessons];
+    const lesson = updatedLessons[lessonIndex];
+    
+    // Ricalcola le ore con la nuova modalità
+    const newHours = calculateLessonHours(lesson.startTime, lesson.endTime, newModality);
+    
+    updatedLessons[lessonIndex] = {
+      ...lesson,
+      location: newModality,
+      hours: newHours
+    };
+
+    const updatedCalendar = calculateParsedCalendar(updatedLessons);
+    updateData({ parsedCalendar: updatedCalendar });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -130,15 +149,15 @@ const Step3Summary = ({ data, updateData, onNext, onPrev }: Step3SummaryProps) =
               <CardContent className="space-y-2">
                 <div>
                   <span className="font-semibold">Totale Ore Previste:</span>
-                  <p className="text-2xl font-bold text-purple-700">{data.parsedCalendar.totalHours}h</p>
+                  <p className="text-2xl font-bold text-purple-700">{data.parsedCalendar.totalHours.toFixed(1)}h</p>
                 </div>
                 <div>
                   <span className="font-semibold">Ore in Presenza:</span>
-                  <p className="text-lg font-semibold text-blue-600">{data.parsedCalendar.presenceHours}h</p>
+                  <p className="text-lg font-semibold text-blue-600">{data.parsedCalendar.presenceHours.toFixed(1)}h</p>
                 </div>
                 <div>
                   <span className="font-semibold">Ore a Distanza:</span>
-                  <p className="text-lg font-semibold text-green-600">{data.parsedCalendar.onlineHours}h</p>
+                  <p className="text-lg font-semibold text-green-600">{data.parsedCalendar.onlineHours.toFixed(1)}h</p>
                 </div>
               </CardContent>
             </Card>
@@ -190,7 +209,7 @@ const Step3Summary = ({ data, updateData, onNext, onPrev }: Step3SummaryProps) =
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center">
                   <Edit className="w-5 h-5 mr-2" />
-                  Modifica Calendario
+                  Correggi Calendario Lezioni
                 </div>
                 <div className="flex items-center space-x-2">
                   {isCalendarLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
@@ -210,7 +229,8 @@ const Step3Summary = ({ data, updateData, onNext, onPrev }: Step3SummaryProps) =
                       Materia - DD/MM/YYYY HH:MM - HH:MM - Modalità
                     </code>
                     <p className="text-sm text-blue-700 mt-2">
-                      Modalità: "Ufficio" per presenza, "Online" per distanza
+                      Modalità: "Ufficio" per presenza, "Online" per distanza<br/>
+                      <strong>Nota:</strong> La pausa pranzo (13:00-14:00) viene automaticamente esclusa dalle ore in presenza.
                     </p>
                   </div>
                   
@@ -241,7 +261,17 @@ const Step3Summary = ({ data, updateData, onNext, onPrev }: Step3SummaryProps) =
           {data.parsedCalendar.lessons.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Anteprima Lezioni</CardTitle>
+                <CardTitle className="flex items-center justify-between">
+                  Anteprima Lezioni
+                  <div className="flex items-center space-x-2 text-sm">
+                    <span>Modifica Modalità:</span>
+                    {isLessonsLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+                    <Switch
+                      checked={!isLessonsLocked}
+                      onCheckedChange={(checked) => setIsLessonsLocked(!checked)}
+                    />
+                  </div>
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="max-h-60 overflow-y-auto">
@@ -262,15 +292,30 @@ const Step3Summary = ({ data, updateData, onNext, onPrev }: Step3SummaryProps) =
                           <td className="p-2">{lesson.date}</td>
                           <td className="p-2">{lesson.startTime} - {lesson.endTime}</td>
                           <td className="p-2">
-                            <span className={`px-2 py-1 rounded text-xs font-medium ${
-                              lesson.location === 'Ufficio' 
-                                ? 'bg-blue-100 text-blue-800' 
-                                : 'bg-green-100 text-green-800'
-                            }`}>
-                              {lesson.location === 'Ufficio' ? '🏢 Presenza' : '💻 Online'}
-                            </span>
+                            {!isLessonsLocked ? (
+                              <Select
+                                value={lesson.location}
+                                onValueChange={(value: 'Ufficio' | 'Online') => handleLessonModalityChange(index, value)}
+                              >
+                                <SelectTrigger className="w-32 h-8">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Ufficio">🏢 Presenza</SelectItem>
+                                  <SelectItem value="Online">💻 Online</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                lesson.location === 'Ufficio' 
+                                  ? 'bg-blue-100 text-blue-800' 
+                                  : 'bg-green-100 text-green-800'
+                              }`}>
+                                {lesson.location === 'Ufficio' ? '🏢 Presenza' : '💻 Online'}
+                              </span>
+                            )}
                           </td>
-                          <td className="p-2 font-semibold">{lesson.hours}h</td>
+                          <td className="p-2 font-semibold">{lesson.hours.toFixed(1)}h</td>
                         </tr>
                       ))}
                     </tbody>
