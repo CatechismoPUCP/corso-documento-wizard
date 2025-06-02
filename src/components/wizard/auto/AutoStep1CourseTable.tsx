@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -119,55 +118,50 @@ const AutoStep1CourseTable = ({ data, updateData, onNext }: AutoStep1CourseTable
       return;
     }
 
-    // Parsa la riga principale con i dati del corso
-    const dataLine = lines[dataLineIndex];
-    const allColumns = dataLine.split('\t');
-    
-    console.log('Riga dati completa:', dataLine);
-    console.log('Tutte le colonne:', allColumns.length, allColumns);
+    // Trova tutte le righe con date/orari per estrarre il calendario completo
+    let fullDataText = '';
+    for (let i = dataLineIndex; i < lines.length; i++) {
+      fullDataText += lines[i];
+      if (i < lines.length - 1) fullDataText += '\n';
+    }
 
-    if (allColumns.length < 4) {
+    console.log('Testo completo dati:', fullDataText);
+
+    // Separa la riga principale dai dati usando le tab
+    const allParts = fullDataText.split('\t');
+    console.log('Tutte le parti separate da tab:', allParts.length, allParts);
+
+    if (allParts.length < 4) {
       alert('Tabella incompleta. Assicurati che contenga almeno le colonne: Corso, ID Corso, ID Sezione, Quando.');
       return;
     }
 
-    const courseName = allColumns[0] || '';
-    const projectId = allColumns[1] || '';
-    const sectionId = allColumns[2] || '';
+    const courseName = allParts[0] || '';
+    const projectId = allParts[1] || '';
+    const sectionId = allParts[2] || '';
     
-    // Il Provider (docente) dovrebbe essere nella colonna 4 (index 4) secondo la struttura
-    // Corso | ID Corso | ID Sezione | Quando | Provider | ...
+    // Il calendario è nella colonna 3, ma può contenere multiple date separate da newline
+    let scheduleText = allParts[3] || '';
+    
+    // Il Provider è nella colonna 4
     let mainTeacher = '';
-    let rendicontabileHours = 0;
-    
-    // Cerca il provider e le ore rendicontabili
-    if (allColumns.length >= 5) {
-      mainTeacher = allColumns[4] || ''; // Provider
+    if (allParts.length > 4) {
+      mainTeacher = allParts[4] || '';
     }
     
-    // Le ore rendicontabili sono nella colonna "Rendicontabile" (index 9)
-    // Corso | ID Corso | ID Sezione | Quando | Provider | Tipo di sede | # Sessioni | Ore Totali | Durata | Rendicontabile | ...
-    if (allColumns.length >= 10) {
-      const rendicontabileText = allColumns[9] || '';
+    // Le ore rendicontabili sono nella colonna 9 (Rendicontabile)
+    let rendicontabileHours = 0;
+    if (allParts.length > 9) {
+      const rendicontabileText = allParts[9] || '';
       const hoursMatch = rendicontabileText.match(/(\d+)/);
       if (hoursMatch) {
         rendicontabileHours = parseInt(hoursMatch[1]);
       }
     }
 
-    // Raccogli tutte le date dalla colonna "Quando" (potrebbero essere su più righe)
-    let scheduleText = allColumns[3] || '';
-    
-    // Se ci sono righe aggiuntive con solo date, aggiungile
-    for (let i = dataLineIndex + 1; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (line && line.match(/^\d{2}\/\d{2}\/\d{4}/)) {
-        scheduleText += '\n' + line;
-      } else {
-        break;
-      }
-    }
-    
+    console.log('Corso:', courseName);
+    console.log('Project ID:', projectId);
+    console.log('Section ID:', sectionId);
     console.log('Calendario estratto:', scheduleText);
     console.log('Docente trovato:', mainTeacher);
     console.log('Ore rendicontabili:', rendicontabileHours);
