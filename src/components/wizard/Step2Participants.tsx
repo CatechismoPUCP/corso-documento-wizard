@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,45 +17,75 @@ const Step2Participants = ({ data, updateData, onNext, onPrev }: Step2Participan
   const [participantsText, setParticipantsText] = useState('');
 
   const parseParticipants = (text: string): Participant[] => {
+    console.log('Starting to parse participants text:', text);
     const lines = text.trim().split('\n');
     const participants: Participant[] = [];
     
     // Skip header line if present
-    const dataLines = lines.filter(line => line.trim() && !line.includes('COGNOME') && !line.includes('N.'));
+    const dataLines = lines.filter(line => {
+      const trimmed = line.trim();
+      return trimmed && 
+             !trimmed.toLowerCase().includes('cognome') && 
+             !trimmed.toLowerCase().includes('n.') &&
+             !trimmed.toLowerCase().includes('codice fiscale');
+    });
+    
+    console.log('Data lines to process:', dataLines.length);
     
     dataLines.forEach((line, index) => {
       const columns = line.split('\t').map(col => col.trim());
+      console.log(`Processing line ${index + 1}:`, columns);
       
       if (columns.length >= 15) { // Minimum required columns
-        participants.push({
+        const participant: Participant = {
           id: index + 1,
-          cognome: columns[2] || '', // Fixed: was taking from column 1, now from column 2
-          nome: columns[3] || '', // Fixed: was taking from column 2, now from column 3
+          cognome: columns[2] || '',
+          nome: columns[3] || '',
           genere: columns[4] || '',
           dataNascita: columns[5] || '',
           comuneNascita: columns[6] || '',
           provNascita: columns[7] || '',
           cittadinanza: columns[8] || '',
-          codiceFiscale: columns[1] || '', // Fixed: now correctly taking codice fiscale from column 1
+          codiceFiscale: columns[1] || '',
           titoloStudio: columns[9] || '',
-          cellulare: columns[10] || '', // This should now correctly get the smartphone number
+          cellulare: columns[10] || '',
           email: columns[11] || '',
           comuneDomicilio: columns[12] || '',
           provDomicilio: columns[13] || '',
           indirizzo: columns[14] || '',
           cap: columns[15] || '',
-          benefits: columns[16] === 'SI' || columns[16] === 'Yes' || columns[16] === 'Sì' ? 'SI' : 'NO', // Parse benefits
-          caseManager: columns[17] || '' // Case manager information
-        });
+          benefits: (columns[16] === 'SI' || columns[16] === 'Yes' || columns[16] === 'Sì' || columns[16] === 'si') ? 'SI' : 'NO',
+          caseManager: columns[17] || ''
+        };
+        
+        console.log(`Created participant ${index + 1}:`, participant);
+        participants.push(participant);
+      } else {
+        console.log(`Line ${index + 1} skipped - not enough columns (${columns.length})`);
       }
     });
     
+    console.log('Total participants parsed:', participants.length);
     return participants;
   };
 
   const handleParseParticipants = () => {
+    console.log('Parsing participants...');
+    if (!participantsText.trim()) {
+      alert('Inserisci il testo della tabella partecipanti');
+      return;
+    }
+    
     const parsed = parseParticipants(participantsText);
+    console.log('Parsed participants:', parsed);
+    
+    if (parsed.length === 0) {
+      alert('Nessun partecipante valido trovato. Verifica il formato della tabella.');
+      return;
+    }
+    
     updateData({ participants: parsed });
+    console.log('Updated data with participants:', parsed);
   };
 
   const moveParticipant = (index: number, direction: 'up' | 'down') => {
@@ -76,6 +105,7 @@ const Step2Participants = ({ data, updateData, onNext, onPrev }: Step2Participan
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Submitting with participants:', data.participants.length);
     if (data.participants.length === 0) {
       alert('Inserisci almeno un partecipante');
       return;
@@ -125,7 +155,7 @@ const Step2Participants = ({ data, updateData, onNext, onPrev }: Step2Participan
               className="flex-1"
             >
               <Upload className="w-4 h-4 mr-2" />
-              Elabora Tabella ({participantsText ? 'Testo inserito' : 'Vuoto'})
+              Elabora Tabella ({participantsText.trim() ? 'Testo inserito' : 'Vuoto'})
             </Button>
           </div>
 
