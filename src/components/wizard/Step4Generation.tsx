@@ -1,16 +1,12 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileText, Calendar, RotateCcw, Download, Share2, Users, ExternalLink, UserCheck } from "lucide-react";
 import { CourseData } from '@/types/course';
 import StudentsContactTable from './StudentsContactTable';
-import { 
-  generateWordReport, 
-  generateAttendanceExcel, 
-  generateExcelCalendar, 
-  generateSampleData 
-} from '@/utils/exportUtils';
+import { generateAttendanceExcel } from '@/utils/attendanceExcelUtils';
+import { generateExcelCalendar } from '@/utils/calendarExcelUtils';
+import { generateWordReport, generateSampleData } from '@/utils/otherExportsUtils';
 import {
   generateGoogleCalendarUrl,
   generateOutlookCalendarUrl,
@@ -84,7 +80,7 @@ const Step4Generation = ({ data, onReset }: Step4GenerationProps) => {
                 <CardContent>
                   <p className="text-sm text-gray-600 mb-4">
                     Genera un foglio Excel per il registro presenze con tutti i partecipanti,
-                    colonne per ogni giorno di lezione, totali giornalieri e progressivi.
+                    colonne per ogni giorno di lezione con modalità (Ufficio/Online), totali e progressive.
                   </p>
                   <Button onClick={() => generateAttendanceExcel(data)} className="w-full bg-green-600 hover:bg-green-700">
                     <UserCheck className="w-4 h-4 mr-2" />
