@@ -1,10 +1,17 @@
 
 import { CourseData } from '@/types/course';
+import { generateWordDocument } from './wordTemplateUtils';
 
-export const generateWordReport = (data: CourseData) => {
+export const generateWordReport = async (data: CourseData) => {
   console.log('Generating Word report with data:', data);
-  // TODO: Implement Word generation logic
-  alert('Funzione Word Report in sviluppo');
+  
+  try {
+    await generateWordDocument(data, 'calendario');
+  } catch (error) {
+    console.error('Error in generateWordReport:', error);
+    // Fallback message for development
+    alert('Per generare il documento Word, caricare il template in public/templates/calendario.docx');
+  }
 };
 
 export const generateSampleData = (data: CourseData) => {

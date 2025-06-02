@@ -49,6 +49,24 @@ const Step4Generation = ({ data, onReset }: Step4GenerationProps) => {
               </div>
             </div>
 
+            {/* Template Info Alert */}
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div className="flex items-center">
+                <FileText className="w-5 h-5 text-yellow-600 mr-2" />
+                <div>
+                  <h4 className="font-medium text-yellow-800">Template Word Required</h4>
+                  <p className="text-sm text-yellow-700 mt-1">
+                    Per generare documenti Word, caricare i template (.docx) nella cartella <code className="bg-yellow-100 px-1 rounded">public/templates/</code>
+                    <br />
+                    Template supportati: calendario.docx, semplice.docx
+                    <br />
+                    Giorni ufficio rilevati: <strong>{data.parsedCalendar.lessons.filter(l => l.location === 'Ufficio').length}</strong> 
+                    (genererà {2 + (data.parsedCalendar.lessons.filter(l => l.location === 'Ufficio').length * 2)} pagine totali)
+                  </p>
+                </div>
+              </div>
+            </div>
+
             {/* Generation Buttons */}
             <div className="grid md:grid-cols-3 gap-4">
               <Card className="border-2 hover:border-blue-300 transition-colors">
@@ -60,12 +78,14 @@ const Step4Generation = ({ data, onReset }: Step4GenerationProps) => {
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-gray-600 mb-4">
-                    Genera un documento Word completo con tutti i dettagli del corso, 
-                    lista partecipanti, registri presenza e riepiloghi orari.
+                    Genera un registro didattico Word completo con tutti i dettagli del corso, 
+                    lista partecipanti e pagine per ogni giorno in ufficio.
+                    <br />
+                    <strong>Richiede template: calendario.docx</strong>
                   </p>
                   <Button onClick={() => generateWordReport(data)} className="w-full bg-blue-600 hover:bg-blue-700">
                     <FileText className="w-4 h-4 mr-2" />
-                    Genera Report Word
+                    Genera Registro Word
                   </Button>
                 </CardContent>
               </Card>
