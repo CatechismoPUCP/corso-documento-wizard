@@ -1,9 +1,13 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Calendar, Clock, Users, MapPin } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { ChevronLeft, ChevronRight, Calendar, Clock, Users, MapPin, Edit, Lock, Unlock } from "lucide-react";
 import { CourseData, ParsedCalendar } from '@/types/course';
+import { parseScheduleText, calculateParsedCalendar } from '@/utils/courseTableParser';
 
 interface Step3SummaryProps {
   data: CourseData;
@@ -13,80 +17,30 @@ interface Step3SummaryProps {
 }
 
 const Step3Summary = ({ data, updateData, onNext, onPrev }: Step3SummaryProps) => {
+  const [isCalendarLocked, setIsCalendarLocked] = useState(true);
+  const [isParticipantsLocked, setIsParticipantsLocked] = useState(true);
+  const [editableCalendar, setEditableCalendar] = useState(data.calendar);
+
   const parseCalendar = (calendarText: string): ParsedCalendar => {
-    const lines = calendarText.trim().split('\n').filter(line => line.trim());
-    const lessons = [];
-    let totalHours = 0;
-    let presenceHours = 0;
-    let onlineHours = 0;
-    let startDate: Date | null = null;
-    let endDate: Date | null = null;
-
-    for (const line of lines) {
-      // Parse format: "Materia - GG/MM/AAAA HH:MM - HH:MM - Ufficio/Online"
-      const match = line.match(/^(.+?)\s*-\s*(\d{2}\/\d{2}\/\d{4})\s+(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})\s*-\s*(Ufficio|Online)$/i);
-      
-      if (match) {
-        const [, subject, dateStr, startTime, endTime, location] = match;
-        
-        // Parse date
-        const [day, month, year] = dateStr.split('/');
-        const lessonDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-        
-        // Calculate hours (excluding lunch break 13:00-14:00)
-        const start = parseInt(startTime.split(':')[0]);
-        const end = parseInt(endTime.split(':')[0]);
-        let hours = end - start;
-        
-        // Subtract lunch break if lesson spans across it
-        if (start < 13 && end > 14) {
-          hours -= 1; // Remove lunch hour
-        }
-        
-        const lesson = {
-          subject: subject.trim(),
-          date: dateStr,
-          startTime,
-          endTime,
-          location: location as 'Ufficio' | 'Online',
-          hours
-        };
-        
-        lessons.push(lesson);
-        totalHours += hours;
-        
-        if (location.toLowerCase() === 'ufficio') {
-          presenceHours += hours;
-        } else {
-          onlineHours += hours;
-        }
-        
-        // Track date range
-        if (!startDate || lessonDate < startDate) {
-          startDate = lessonDate;
-        }
-        if (!endDate || lessonDate > endDate) {
-          endDate = lessonDate;
-        }
-      }
-    }
-
-    return {
-      startDate,
-      endDate,
-      totalHours,
-      presenceHours,
-      onlineHours,
-      lessons
-    };
+    const lessons = parseScheduleText(calendarText);
+    return calculateParsedCalendar(lessons);
   };
 
   useEffect(() => {
-    if (data.calendar) {
+    if (data.calendar && !data.parsedCalendar.lessons.length) {
       const parsed = parseCalendar(data.calendar);
       updateData({ parsedCalendar: parsed });
     }
-  }, [data.calendar, updateData]);
+  }, []); // Rimuovo data.calendar dalle dipendenze per evitare loop infinito
+
+  const handleCalendarUpdate = () => {
+    const parsed = parseCalendar(editableCalendar);
+    updateData({ 
+      calendar: editableCalendar,
+      parsedCalendar: parsed 
+    });
+    setIsCalendarLocked(true);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -119,16 +73,24 @@ const Step3Summary = ({ data, updateData, onNext, onPrev }: Step3SummaryProps) =
                   <p>{data.courseName}</p>
                 </div>
                 <div>
+                  <span className="font-semibold">ID Corso:</span>
+                  <p className="font-mono text-sm">{data.projectId}</p>
+                </div>
+                <div>
                   <span className="font-semibold">ID Sezione:</span>
-                  <p>{data.sectionId}</p>
+                  <p className="font-mono text-sm">{data.sectionId}</p>
                 </div>
                 <div>
                   <span className="font-semibold">Docente Principale:</span>
                   <p>{data.mainTeacher}</p>
                 </div>
                 <div>
-                  <span className="font-semibold">Codice Fiscale:</span>
-                  <p className="font-mono text-sm">{data.teacherCF}</p>
+                  <span className="font-semibold">Codice Fiscale Docente:</span>
+                  <p className="font-mono text-sm">{data.teacherCF || 'Non specificato'}</p>
+                </div>
+                <div>
+                  <span className="font-semibold">Sede:</span>
+                  <p>{data.location}</p>
                 </div>
               </CardContent>
             </Card>
@@ -172,11 +134,11 @@ const Step3Summary = ({ data, updateData, onNext, onPrev }: Step3SummaryProps) =
                 </div>
                 <div>
                   <span className="font-semibold">Ore in Presenza:</span>
-                  <p>{data.parsedCalendar.presenceHours}h</p>
+                  <p className="text-lg font-semibold text-blue-600">{data.parsedCalendar.presenceHours}h</p>
                 </div>
                 <div>
                   <span className="font-semibold">Ore a Distanza:</span>
-                  <p>{data.parsedCalendar.onlineHours}h</p>
+                  <p className="text-lg font-semibold text-green-600">{data.parsedCalendar.onlineHours}h</p>
                 </div>
               </CardContent>
             </Card>
@@ -187,6 +149,13 @@ const Step3Summary = ({ data, updateData, onNext, onPrev }: Step3SummaryProps) =
                 <CardTitle className="text-lg flex items-center">
                   <Users className="w-5 h-5 mr-2" />
                   Partecipanti
+                  <div className="ml-auto flex items-center space-x-2">
+                    {isParticipantsLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+                    <Switch
+                      checked={!isParticipantsLocked}
+                      onCheckedChange={(checked) => setIsParticipantsLocked(!checked)}
+                    />
+                  </div>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
@@ -198,9 +167,75 @@ const Step3Summary = ({ data, updateData, onNext, onPrev }: Step3SummaryProps) =
                   <span className="font-semibold">Lista Caricata:</span>
                   <p>{data.participants.length > 0 ? '✅ Sì' : '❌ No'}</p>
                 </div>
+                {!isParticipantsLocked && data.participants.length > 0 && (
+                  <div className="mt-3">
+                    <h4 className="font-semibold mb-2">Lista Corsisti:</h4>
+                    <div className="max-h-32 overflow-y-auto text-sm">
+                      {data.participants.map((participant, index) => (
+                        <div key={participant.id} className="flex justify-between py-1 border-b">
+                          <span>{index + 1}. {participant.cognome} {participant.nome}</span>
+                          <span className="text-xs text-gray-500">{participant.benefits}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
+
+          {/* Calendar Editor */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Edit className="w-5 h-5 mr-2" />
+                  Modifica Calendario
+                </div>
+                <div className="flex items-center space-x-2">
+                  {isCalendarLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+                  <Switch
+                    checked={!isCalendarLocked}
+                    onCheckedChange={(checked) => setIsCalendarLocked(!checked)}
+                  />
+                </div>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {!isCalendarLocked && (
+                <div className="space-y-4">
+                  <div className="bg-blue-50 p-4 rounded-lg">
+                    <h3 className="font-semibold text-blue-900 mb-2">Formato richiesto:</h3>
+                    <code className="text-xs bg-white p-2 rounded block">
+                      Materia - DD/MM/YYYY HH:MM - HH:MM - Modalità
+                    </code>
+                    <p className="text-sm text-blue-700 mt-2">
+                      Modalità: "Ufficio" per presenza, "Online" per distanza
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="calendarEdit">Calendario Lezioni</Label>
+                    <Textarea
+                      id="calendarEdit"
+                      value={editableCalendar}
+                      onChange={(e) => setEditableCalendar(e.target.value)}
+                      rows={8}
+                      className="font-mono text-sm"
+                    />
+                  </div>
+                  
+                  <Button 
+                    type="button" 
+                    onClick={handleCalendarUpdate}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    Aggiorna Calendario
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Lessons Preview */}
           {data.parsedCalendar.lessons.length > 0 && (
@@ -223,19 +258,19 @@ const Step3Summary = ({ data, updateData, onNext, onPrev }: Step3SummaryProps) =
                     <tbody>
                       {data.parsedCalendar.lessons.map((lesson, index) => (
                         <tr key={index} className="border-b">
-                          <td className="p-2">{lesson.subject}</td>
+                          <td className="p-2 font-medium">{lesson.subject}</td>
                           <td className="p-2">{lesson.date}</td>
                           <td className="p-2">{lesson.startTime} - {lesson.endTime}</td>
                           <td className="p-2">
-                            <span className={`px-2 py-1 rounded text-xs ${
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${
                               lesson.location === 'Ufficio' 
                                 ? 'bg-blue-100 text-blue-800' 
                                 : 'bg-green-100 text-green-800'
                             }`}>
-                              {lesson.location}
+                              {lesson.location === 'Ufficio' ? '🏢 Presenza' : '💻 Online'}
                             </span>
                           </td>
-                          <td className="p-2">{lesson.hours}h</td>
+                          <td className="p-2 font-semibold">{lesson.hours}h</td>
                         </tr>
                       ))}
                     </tbody>

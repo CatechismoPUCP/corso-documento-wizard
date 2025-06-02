@@ -6,9 +6,11 @@ export const parseScheduleText = (scheduleText: string): Lesson[] => {
   const lines = scheduleText.split('\n').filter(line => line.trim());
   
   lines.forEach(line => {
-    const dateTimeMatch = line.match(/(\d{2}\/\d{2}\/\d{4})\s+(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})/);
-    if (dateTimeMatch) {
-      const [, dateStr, startTime, endTime] = dateTimeMatch;
+    // Nuovo formato: "Materia - DD/MM/YYYY HH:MM - HH:MM - Modalità"
+    const newFormatMatch = line.match(/^(.+?)\s*-\s*(\d{2}\/\d{2}\/\d{4})\s+(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})\s*-\s*(Ufficio|Online)$/i);
+    
+    if (newFormatMatch) {
+      const [, subject, dateStr, startTime, endTime, location] = newFormatMatch;
       const startHour = parseInt(startTime.split(':')[0]);
       const endHour = parseInt(endTime.split(':')[0]);
       const startMin = parseInt(startTime.split(':')[1]);
@@ -16,21 +18,49 @@ export const parseScheduleText = (scheduleText: string): Lesson[] => {
       
       let totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
       
-      // Sottrai pausa pranzo se presente
-      if (startHour <= 13 && endHour >= 14) {
+      // Sottrai pausa pranzo se presente (solo per lezioni in presenza che attraversano l'ora di pranzo)
+      if (location.toLowerCase() === 'ufficio' && startHour <= 13 && endHour >= 14) {
         totalMinutes -= 60; // Sottrai 1 ora di pausa pranzo
       }
       
       const hours = totalMinutes / 60;
       
       lessons.push({
-        subject: 'Lezione',
+        subject: subject.trim(),
         date: dateStr,
         startTime,
         endTime,
-        location: 'Ufficio',
+        location: location as 'Ufficio' | 'Online',
         hours
       });
+    } else {
+      // Formato vecchio: "DD/MM/YYYY HH:MM - HH:MM"
+      const dateTimeMatch = line.match(/(\d{2}\/\d{2}\/\d{4})\s+(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})/);
+      if (dateTimeMatch) {
+        const [, dateStr, startTime, endTime] = dateTimeMatch;
+        const startHour = parseInt(startTime.split(':')[0]);
+        const endHour = parseInt(endTime.split(':')[0]);
+        const startMin = parseInt(startTime.split(':')[1]);
+        const endMin = parseInt(endTime.split(':')[1]);
+        
+        let totalMinutes = (endHour * 60 + endMin) - (startHour * 60 + startMin);
+        
+        // Sottrai pausa pranzo se presente
+        if (startHour <= 13 && endHour >= 14) {
+          totalMinutes -= 60; // Sottrai 1 ora di pausa pranzo
+        }
+        
+        const hours = totalMinutes / 60;
+        
+        lessons.push({
+          subject: 'Lezione',
+          date: dateStr,
+          startTime,
+          endTime,
+          location: 'Ufficio', // Default per formato vecchio
+          hours
+        });
+      }
     }
   });
   
