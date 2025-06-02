@@ -1,4 +1,3 @@
-
 export interface Participant {
   id: number;
   cognome: string;
@@ -16,6 +15,8 @@ export interface Participant {
   provDomicilio: string;
   indirizzo: string;
   cap: string;
+  benefits: 'SI' | 'NO'; // Added benefits field
+  caseManager: string; // Added case manager field
 }
 
 export interface Lesson {
