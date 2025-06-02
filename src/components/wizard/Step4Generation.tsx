@@ -66,50 +66,94 @@ const Step4Generation = ({ data, onReset }: Step4GenerationProps) => {
       return;
     }
 
-    // Create Google Calendar URL for the first lesson as example
-    const firstLesson = lessons[0];
-    const [day, month, year] = firstLesson.date.split('/');
-    const startDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-    
-    // Format dates for Google Calendar
-    const formatDateForGoogle = (date: Date, time: string) => {
-      const [hours, minutes] = time.split(':');
-      const newDate = new Date(date);
-      newDate.setHours(parseInt(hours), parseInt(minutes));
-      return newDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-    };
+    // Create multiple Google Calendar URLs for all lessons
+    lessons.forEach((lesson, index) => {
+      const [day, month, year] = lesson.date.split('/');
+      const startDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      
+      // Format dates for Google Calendar
+      const formatDateForGoogle = (date: Date, time: string) => {
+        const [hours, minutes] = time.split(':');
+        const newDate = new Date(date);
+        newDate.setHours(parseInt(hours), parseInt(minutes));
+        return newDate.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+      };
 
-    const startDateTime = formatDateForGoogle(startDate, firstLesson.startTime);
-    const endDateTime = formatDateForGoogle(startDate, firstLesson.endTime);
-    
-    const title = encodeURIComponent(`${data.courseName} - ${firstLesson.subject}`);
-    const details = encodeURIComponent(`Corso: ${data.courseName}\nDocente: ${data.mainTeacher}\nModalità: ${firstLesson.location}`);
-    const location = encodeURIComponent(firstLesson.location === 'Ufficio' ? data.location || 'In presenza' : 'Online');
+      const startDateTime = formatDateForGoogle(startDate, lesson.startTime);
+      const endDateTime = formatDateForGoogle(startDate, lesson.endTime);
+      
+      const title = encodeURIComponent(`${data.courseName} - ${lesson.subject}`);
+      const details = encodeURIComponent(`Corso: ${data.courseName}\nDocente: ${data.mainTeacher}\nModalità: ${lesson.location}\nLezione ${index + 1} di ${lessons.length}`);
+      const location = encodeURIComponent(lesson.location === 'Ufficio' ? data.location || 'In presenza' : 'Online');
 
-    const googleUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startDateTime}/${endDateTime}&details=${details}&location=${location}`;
-    
-    window.open(googleUrl, '_blank');
+      const googleUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startDateTime}/${endDateTime}&details=${details}&location=${location}`;
+      
+      // Open each event in a new tab with a small delay
+      setTimeout(() => {
+        window.open(googleUrl, '_blank');
+      }, index * 500); // 500ms delay between each opening
+    });
   };
 
-  const generateTeamsUrl = () => {
+  const generateOutlookCalendarUrl = () => {
     const lessons = data.parsedCalendar.lessons;
     if (lessons.length === 0) {
-      alert('Nessuna lezione trovata per generare il link Teams.');
+      alert('Nessuna lezione trovata per generare il link Outlook.');
       return;
     }
 
-    const firstLesson = lessons[0];
-    const [day, month, year] = firstLesson.date.split('/');
-    const startDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-    
-    const title = encodeURIComponent(`${data.courseName} - ${firstLesson.subject}`);
-    const startTime = encodeURIComponent(`${firstLesson.date} ${firstLesson.startTime}`);
-    const endTime = encodeURIComponent(`${firstLesson.date} ${firstLesson.endTime}`);
-    
-    // Microsoft Teams meeting URL format
-    const teamsUrl = `https://teams.microsoft.com/l/meeting/new?subject=${title}&startTime=${startTime}&endTime=${endTime}`;
-    
-    window.open(teamsUrl, '_blank');
+    // Create multiple Outlook Calendar URLs for all lessons
+    lessons.forEach((lesson, index) => {
+      const [day, month, year] = lesson.date.split('/');
+      const startDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      
+      const formatDateForOutlook = (date: Date, time: string) => {
+        const [hours, minutes] = time.split(':');
+        const newDate = new Date(date);
+        newDate.setHours(parseInt(hours), parseInt(minutes));
+        return newDate.toISOString();
+      };
+
+      const startDateTime = formatDateForOutlook(startDate, lesson.startTime);
+      const endDateTime = formatDateForOutlook(startDate, lesson.endTime);
+      
+      const title = encodeURIComponent(`${data.courseName} - ${lesson.subject}`);
+      const body = encodeURIComponent(`Corso: ${data.courseName}\nDocente: ${data.mainTeacher}\nModalità: ${lesson.location}\nLezione ${index + 1} di ${lessons.length}`);
+      const location = encodeURIComponent(lesson.location === 'Ufficio' ? data.location || 'In presenza' : 'Online');
+
+      const outlookUrl = `https://outlook.live.com/calendar/0/deeplink/compose?subject=${title}&startdt=${startDateTime}&enddt=${endDateTime}&body=${body}&location=${location}`;
+      
+      // Open each event in a new tab with a small delay
+      setTimeout(() => {
+        window.open(outlookUrl, '_blank');
+      }, index * 500); // 500ms delay between each opening
+    });
+  };
+
+  const generateTeamsUrl = () => {
+    const lessons = data.parsedCalendar.lessons.filter(lesson => lesson.location === 'Online');
+    if (lessons.length === 0) {
+      alert('Nessuna lezione online trovata per generare meeting Teams.');
+      return;
+    }
+
+    // Create Teams meetings only for online lessons
+    lessons.forEach((lesson, index) => {
+      const [day, month, year] = lesson.date.split('/');
+      const startDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+      
+      const title = encodeURIComponent(`${data.courseName} - ${lesson.subject}`);
+      const startTime = encodeURIComponent(`${lesson.date} ${lesson.startTime}`);
+      const endTime = encodeURIComponent(`${lesson.date} ${lesson.endTime}`);
+      
+      // Microsoft Teams meeting URL format
+      const teamsUrl = `https://teams.microsoft.com/l/meeting/new?subject=${title}&startTime=${startTime}&endTime=${endTime}`;
+      
+      // Open each meeting in a new tab with a small delay
+      setTimeout(() => {
+        window.open(teamsUrl, '_blank');
+      }, index * 500); // 500ms delay between each opening
+    });
   };
 
   const downloadICalendar = () => {
@@ -119,11 +163,13 @@ const Step4Generation = ({ data, onReset }: Step4GenerationProps) => {
       return;
     }
 
-    // Generate iCal format
+    // Generate iCal format with ALL lessons
     let icalContent = 'BEGIN:VCALENDAR\n';
     icalContent += 'VERSION:2.0\n';
     icalContent += 'PRODID:-//Lovable//Course Calendar//EN\n';
     icalContent += 'CALSCALE:GREGORIAN\n';
+    icalContent += `X-WR-CALNAME:${data.courseName}\n`;
+    icalContent += `X-WR-CALDESC:Calendario completo del corso ${data.courseName} - ${data.mainTeacher}\n`;
 
     lessons.forEach((lesson, index) => {
       const [day, month, year] = lesson.date.split('/');
@@ -145,8 +191,10 @@ const Step4Generation = ({ data, onReset }: Step4GenerationProps) => {
       icalContent += `DTSTART:${startDateTime}\n`;
       icalContent += `DTEND:${endDateTime}\n`;
       icalContent += `SUMMARY:${data.courseName} - ${lesson.subject}\n`;
-      icalContent += `DESCRIPTION:Corso: ${data.courseName}\\nDocente: ${data.mainTeacher}\\nModalità: ${lesson.location}\n`;
+      icalContent += `DESCRIPTION:Corso: ${data.courseName}\\nDocente: ${data.mainTeacher}\\nModalità: ${lesson.location}\\nLezione ${index + 1} di ${lessons.length}\n`;
       icalContent += `LOCATION:${lesson.location === 'Ufficio' ? (data.location || 'In presenza') : 'Online'}\n`;
+      icalContent += 'STATUS:CONFIRMED\n';
+      icalContent += 'SEQUENCE:0\n';
       icalContent += 'END:VEVENT\n';
     });
 
@@ -157,7 +205,7 @@ const Step4Generation = ({ data, onReset }: Step4GenerationProps) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `calendario_${data.sectionId}.ics`;
+    a.download = `calendario_completo_${data.sectionId}.ics`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -331,10 +379,11 @@ const Step4Generation = ({ data, onReset }: Step4GenerationProps) => {
               Sincronizzazione Calendario
             </h3>
             <p className="text-sm text-gray-600 mb-4">
-              Sincronizza facilmente il calendario del corso con i tuoi servizi preferiti o condividilo con gli studenti.
+              Sincronizza facilmente il calendario del corso con i tuoi servizi preferiti. 
+              <strong>Tutte le {data.parsedCalendar.lessons.length} lezioni</strong> verranno aggiunte automaticamente.
             </p>
             
-            <div className="grid md:grid-cols-3 gap-4">
+            <div className="grid md:grid-cols-4 gap-4">
               <Card className="border-2 hover:border-red-300 transition-colors">
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center text-red-600 text-base">
@@ -344,11 +393,29 @@ const Step4Generation = ({ data, onReset }: Step4GenerationProps) => {
                 </CardHeader>
                 <CardContent>
                   <p className="text-xs text-gray-600 mb-3">
-                    Aggiungi direttamente al tuo Google Calendar e condividi con gli studenti.
+                    Aggiungi tutte le {data.parsedCalendar.lessons.length} lezioni al tuo Google Calendar.
                   </p>
                   <Button onClick={generateGoogleCalendarUrl} className="w-full bg-red-600 hover:bg-red-700 text-sm">
                     <ExternalLink className="w-3 h-3 mr-2" />
                     Apri in Google Calendar
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="border-2 hover:border-blue-300 transition-colors">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center text-blue-600 text-base">
+                    <Calendar className="w-5 h-5 mr-2" />
+                    Outlook Calendar
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-xs text-gray-600 mb-3">
+                    Aggiungi tutte le {data.parsedCalendar.lessons.length} lezioni al tuo Outlook.
+                  </p>
+                  <Button onClick={generateOutlookCalendarUrl} className="w-full bg-blue-600 hover:bg-blue-700 text-sm">
+                    <ExternalLink className="w-3 h-3 mr-2" />
+                    Apri in Outlook
                   </Button>
                 </CardContent>
               </Card>
@@ -362,7 +429,7 @@ const Step4Generation = ({ data, onReset }: Step4GenerationProps) => {
                 </CardHeader>
                 <CardContent>
                   <p className="text-xs text-gray-600 mb-3">
-                    Crea meeting Teams per le lezioni online e organizza la classe.
+                    Crea meeting Teams per le lezioni online ({data.parsedCalendar.lessons.filter(l => l.location === 'Online').length} lezioni).
                   </p>
                   <Button onClick={generateTeamsUrl} className="w-full bg-purple-600 hover:bg-purple-700 text-sm">
                     <ExternalLink className="w-3 h-3 mr-2" />
@@ -380,7 +447,7 @@ const Step4Generation = ({ data, onReset }: Step4GenerationProps) => {
                 </CardHeader>
                 <CardContent>
                   <p className="text-xs text-gray-600 mb-3">
-                    Scarica file calendario universale compatibile con tutti i client.
+                    Scarica calendario completo con tutte le {data.parsedCalendar.lessons.length} lezioni.
                   </p>
                   <Button onClick={downloadICalendar} variant="outline" className="w-full border-indigo-300 text-indigo-600 hover:bg-indigo-50 text-sm">
                     <Download className="w-3 h-3 mr-2" />
