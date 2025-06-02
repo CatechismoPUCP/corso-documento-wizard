@@ -1,3 +1,4 @@
+
 import * as XLSX from 'xlsx';
 import { CourseData } from '@/types/course';
 
@@ -53,7 +54,7 @@ export const generateAttendanceExcel = (data: CourseData) => {
     
     // Students data
     data.participants.forEach((participant, index) => {
-      const studentRow = [
+      const studentRow: any[] = [
         data.projectId,
         data.sectionId, 
         data.courseName,
@@ -99,7 +100,7 @@ export const generateAttendanceExcel = (data: CourseData) => {
     });
     
     // Add daily totals row
-    const dailyTotalsRow = new Array(15).fill('');
+    const dailyTotalsRow: any[] = new Array(15).fill('');
     dailyTotalsRow[7] = 'ORE TOTALI GIORNATA'; // In the name column
     
     data.parsedCalendar.lessons.forEach((_, index) => {
@@ -121,7 +122,7 @@ export const generateAttendanceExcel = (data: CourseData) => {
     wsData.push(dailyTotalsRow);
     
     // Add progressive totals row
-    const progressiveRow = new Array(15).fill('');
+    const progressiveRow: any[] = new Array(15).fill('');
     progressiveRow[7] = 'ORE PROGRESSIVE';
     
     data.parsedCalendar.lessons.forEach((_, index) => {
