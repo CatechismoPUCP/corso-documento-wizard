@@ -1,6 +1,7 @@
 
 import { CourseData } from '@/types/course';
 import { generateWordDocument } from './wordTemplateUtils';
+import { generateFADDocument } from './fadTemplateUtils';
 
 export const generateWordReport = async (data: CourseData) => {
   console.log('Generating Word report with data:', data);
@@ -14,6 +15,18 @@ export const generateWordReport = async (data: CourseData) => {
   }
 };
 
+export const generateFADReport = async (data: CourseData) => {
+  console.log('Generating FAD report with data:', data);
+  
+  try {
+    await generateFADDocument(data);
+  } catch (error) {
+    console.error('Error in generateFADReport:', error);
+    // Fallback message for development
+    alert('Per generare il Modulo A FAD, caricare il template in public/templates/MODULO_A_FAD.docx');
+  }
+};
+
 export const generateSampleData = (data: CourseData) => {
   const sampleData = {
     courseInfo: {
@@ -24,6 +37,14 @@ export const generateSampleData = (data: CourseData) => {
       mainTeacher: data.mainTeacher,
       teacherCF: data.teacherCF,
       operation: data.operation
+    },
+    fadData: {
+      teacherEmail: data.teacherEmail,
+      teacherPhone: data.teacherPhone,
+      zoomLink: data.zoomLink,
+      zoomId: data.zoomId,
+      zoomPasscode: data.zoomPasscode,
+      fadHours: data.parsedCalendar.fadHours
     },
     calendar: data.parsedCalendar,
     participants: data.participants,

@@ -1,3 +1,4 @@
+
 export interface Participant {
   id: number;
   cognome: string;
@@ -34,6 +35,7 @@ export interface ParsedCalendar {
   totalHours: number;
   presenceHours: number;
   onlineHours: number;
+  fadHours: number; // New: FAD hours excluding lunch break
   lessons: Lesson[];
 }
 
@@ -47,6 +49,14 @@ export interface CourseData {
   teacherCF: string;
   operation: string;
   calendar: string;
+  
+  // FAD specific data
+  teacherEmail?: string;
+  teacherPhone?: string;
+  zoomData?: string; // Raw pasted Zoom data
+  zoomLink?: string; // Parsed Zoom link
+  zoomId?: string; // Parsed meeting ID
+  zoomPasscode?: string; // Parsed passcode
   
   // Step 2 data
   participants: Participant[];

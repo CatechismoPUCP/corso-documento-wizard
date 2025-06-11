@@ -1,5 +1,40 @@
-
 import { CourseData } from '@/types/course';
+
+export const calculateFADHours = (lessons: any[]): number => {
+  console.log('Calculating FAD hours for online lessons:', lessons);
+  
+  let totalFADHours = 0;
+  
+  const onlineLessons = lessons.filter(lesson => lesson.location === 'Online');
+  
+  onlineLessons.forEach(lesson => {
+    const startTime = lesson.startTime.split(':').map(Number);
+    const endTime = lesson.endTime.split(':').map(Number);
+    
+    const startMinutes = startTime[0] * 60 + startTime[1];
+    const endMinutes = endTime[0] * 60 + endTime[1];
+    
+    let lessonMinutes = endMinutes - startMinutes;
+    
+    // Check if lesson spans lunch break (13:00-14:00)
+    const lunchStart = 13 * 60; // 13:00 in minutes
+    const lunchEnd = 14 * 60;   // 14:00 in minutes
+    
+    if (startMinutes < lunchEnd && endMinutes > lunchStart) {
+      // Lesson spans lunch break, subtract 1 hour (60 minutes)
+      const overlapStart = Math.max(startMinutes, lunchStart);
+      const overlapEnd = Math.min(endMinutes, lunchEnd);
+      const lunchOverlap = overlapEnd - overlapStart;
+      lessonMinutes -= lunchOverlap;
+      console.log(`Lesson ${lesson.subject} on ${lesson.date}: removed ${lunchOverlap} minutes for lunch break`);
+    }
+    
+    totalFADHours += lessonMinutes / 60;
+  });
+  
+  console.log('Total FAD hours calculated:', totalFADHours);
+  return Math.round(totalFADHours * 100) / 100; // Round to 2 decimal places
+};
 
 export const generateGoogleCalendarUrl = (data: CourseData) => {
   const lessons = data.parsedCalendar.lessons;

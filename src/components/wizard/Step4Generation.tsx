@@ -1,12 +1,13 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Calendar, RotateCcw, Download, Share2, Users, ExternalLink, UserCheck } from "lucide-react";
+import { FileText, Calendar, RotateCcw, Download, Share2, Users, ExternalLink, UserCheck, Wifi } from "lucide-react";
 import { CourseData } from '@/types/course';
 import StudentsContactTable from './StudentsContactTable';
 import { generateAttendanceExcel } from '@/utils/attendanceExcelUtils';
 import { generateExcelCalendar } from '@/utils/calendarExcelUtils';
-import { generateWordReport, generateSampleData } from '@/utils/otherExportsUtils';
+import { generateWordReport, generateFADReport, generateSampleData } from '@/utils/otherExportsUtils';
 import {
   generateGoogleCalendarUrl,
   generateOutlookCalendarUrl,
@@ -20,6 +21,10 @@ interface Step4GenerationProps {
 }
 
 const Step4Generation = ({ data, onReset }: Step4GenerationProps) => {
+  const onlineLessonsCount = data.parsedCalendar.lessons.filter(l => l.location === 'Online').length;
+  const hasOnlineLessons = onlineLessonsCount > 0;
+  const hasZoomData = data.zoomLink || data.zoomId;
+
   return (
     <div className="space-y-6">
       <Card>
@@ -30,7 +35,7 @@ const Step4Generation = ({ data, onReset }: Step4GenerationProps) => {
         <CardContent>
           <div className="space-y-6">
             {/* Summary Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
               <div className="bg-blue-50 p-4 rounded-lg text-center">
                 <div className="text-2xl font-bold text-blue-700">{data.parsedCalendar.totalHours}h</div>
                 <div className="text-sm text-blue-600">Ore Totali</div>
@@ -47,6 +52,10 @@ const Step4Generation = ({ data, onReset }: Step4GenerationProps) => {
                 <div className="text-2xl font-bold text-orange-700">{data.parsedCalendar.presenceHours}h</div>
                 <div className="text-sm text-orange-600">In Presenza</div>
               </div>
+              <div className="bg-cyan-50 p-4 rounded-lg text-center">
+                <div className="text-2xl font-bold text-cyan-700">{data.parsedCalendar.fadHours || data.parsedCalendar.onlineHours}h</div>
+                <div className="text-sm text-cyan-600">FAD Online</div>
+              </div>
             </div>
 
             {/* Template Info Alert */}
@@ -58,17 +67,17 @@ const Step4Generation = ({ data, onReset }: Step4GenerationProps) => {
                   <p className="text-sm text-yellow-700 mt-1">
                     Per generare documenti Word, caricare i template (.docx) nella cartella <code className="bg-yellow-100 px-1 rounded">public/templates/</code>
                     <br />
-                    Template supportati: calendario.docx, semplice.docx
+                    Template supportati: calendario.docx, MODULO_A_FAD.docx
                     <br />
-                    Giorni ufficio rilevati: <strong>{data.parsedCalendar.lessons.filter(l => l.location === 'Ufficio').length}</strong> 
-                    (genererà {2 + (data.parsedCalendar.lessons.filter(l => l.location === 'Ufficio').length * 2)} pagine totali)
+                    Giorni ufficio: <strong>{data.parsedCalendar.lessons.filter(l => l.location === 'Ufficio').length}</strong>, 
+                    Giorni online: <strong>{onlineLessonsCount}</strong>
                   </p>
                 </div>
               </div>
             </div>
 
             {/* Generation Buttons */}
-            <div className="grid md:grid-cols-3 gap-4">
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
               <Card className="border-2 hover:border-blue-300 transition-colors">
                 <CardHeader>
                   <CardTitle className="flex items-center text-blue-700">
@@ -81,11 +90,39 @@ const Step4Generation = ({ data, onReset }: Step4GenerationProps) => {
                     Genera un registro didattico Word completo con tutti i dettagli del corso, 
                     lista partecipanti e pagine per ogni giorno in ufficio.
                     <br />
-                    <strong>Richiede template: calendario.docx</strong>
+                    <strong>Richiede: calendario.docx</strong>
                   </p>
                   <Button onClick={() => generateWordReport(data)} className="w-full bg-blue-600 hover:bg-blue-700">
                     <FileText className="w-4 h-4 mr-2" />
                     Genera Registro Word
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className={`border-2 transition-colors ${hasOnlineLessons && hasZoomData ? 'hover:border-cyan-300' : 'border-gray-200 opacity-60'}`}>
+                <CardHeader>
+                  <CardTitle className={`flex items-center ${hasOnlineLessons && hasZoomData ? 'text-cyan-700' : 'text-gray-500'}`}>
+                    <Wifi className="w-6 h-6 mr-2" />
+                    Modulo A FAD
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Genera il Modulo A per Formazione a Distanza con calendario delle lezioni online, 
+                    dati Zoom e informazioni complete del corso.
+                    <br />
+                    <strong>Richiede: MODULO_A_FAD.docx</strong>
+                    <br />
+                    {!hasOnlineLessons && <span className="text-red-600">⚠️ Nessuna lezione online</span>}
+                    {hasOnlineLessons && !hasZoomData && <span className="text-red-600">⚠️ Dati Zoom mancanti</span>}
+                  </p>
+                  <Button 
+                    onClick={() => generateFADReport(data)} 
+                    disabled={!hasOnlineLessons || !hasZoomData}
+                    className="w-full bg-cyan-600 hover:bg-cyan-700 disabled:bg-gray-400"
+                  >
+                    <Wifi className="w-4 h-4 mr-2" />
+                    Crea Modulo A FAD
                   </Button>
                 </CardContent>
               </Card>

@@ -9,6 +9,7 @@ import Step2Participants from './wizard/Step2Participants';
 import Step3Summary from './wizard/Step3Summary';
 import Step4Generation from './wizard/Step4Generation';
 import { CourseData } from '@/types/course';
+import { calculateFADHours } from '@/utils/calendarUtils';
 
 interface CourseWizardProps {
   onBack: () => void;
@@ -32,6 +33,7 @@ const CourseWizard = ({ onBack }: CourseWizardProps) => {
       totalHours: 0,
       presenceHours: 0,
       onlineHours: 0,
+      fadHours: 0,
       lessons: []
     }
   });
@@ -44,7 +46,16 @@ const CourseWizard = ({ onBack }: CourseWizardProps) => {
   ];
 
   const updateCourseData = (updates: Partial<CourseData>) => {
-    setCourseData(prev => ({ ...prev, ...updates }));
+    setCourseData(prev => {
+      const newData = { ...prev, ...updates };
+      
+      // Recalculate FAD hours when lessons change
+      if (updates.parsedCalendar?.lessons) {
+        newData.parsedCalendar.fadHours = calculateFADHours(updates.parsedCalendar.lessons);
+      }
+      
+      return newData;
+    });
   };
 
   const nextStep = () => {
@@ -77,6 +88,7 @@ const CourseWizard = ({ onBack }: CourseWizardProps) => {
         totalHours: 0,
         presenceHours: 0,
         onlineHours: 0,
+        fadHours: 0,
         lessons: []
       }
     });
