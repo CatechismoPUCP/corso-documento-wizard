@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,6 +30,7 @@ const AutomaticWizard = ({ onBack }: AutomaticWizardProps) => {
       totalHours: 0,
       presenceHours: 0,
       onlineHours: 0,
+      fadHours: 0,
       lessons: []
     }
   });
@@ -76,6 +76,7 @@ const AutomaticWizard = ({ onBack }: AutomaticWizardProps) => {
         totalHours: 0,
         presenceHours: 0,
         onlineHours: 0,
+        fadHours: 0,
         lessons: []
       }
     });

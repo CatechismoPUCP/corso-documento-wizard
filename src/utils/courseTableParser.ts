@@ -76,6 +76,7 @@ export const calculateParsedCalendar = (lessons: Lesson[]): ParsedCalendar => {
       totalHours: 0,
       presenceHours: 0,
       onlineHours: 0,
+      fadHours: 0,
       lessons: []
     };
   }
@@ -96,12 +97,18 @@ export const calculateParsedCalendar = (lessons: Lesson[]): ParsedCalendar => {
     .filter(lesson => lesson.location === 'Online')
     .reduce((sum, lesson) => sum + lesson.hours, 0);
 
+  // Calculate FAD hours (online hours excluding lunch break)
+  const fadHours = lessons
+    .filter(lesson => lesson.location === 'Online')
+    .reduce((sum, lesson) => sum + lesson.hours, 0);
+
   return {
     startDate,
     endDate,
     totalHours,
     presenceHours,
     onlineHours,
+    fadHours,
     lessons
   };
 };
