@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -130,7 +129,7 @@ const Step4Generation = ({ data, onReset }: Step4GenerationProps) => {
               <Card className="border-2 hover:border-green-300 transition-colors">
                 <CardHeader>
                   <CardTitle className="flex items-center text-green-700">
-                    <UserCheckClassName="w-6 h-6 mr-2" />
+                    <UserCheck className="w-6 h-6 mr-2" />
                     Registro Presenze Excel
                   </CardTitle>
                 </CardHeader>

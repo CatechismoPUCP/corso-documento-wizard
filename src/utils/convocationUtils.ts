@@ -18,7 +18,8 @@ export interface ConvocationTemplateData {
   SEDE_CORSO: string;
   PERIODO_CORSO: string;
   
-  // Contact and document info
+  // Teacher and contact info
+  NOME_DOCENTE: string;
   EMAIL_CONTATTO: string;
   LUOGO: string;
   DATA_DOCUMENTO: string;
@@ -80,7 +81,8 @@ export const generateConvocationData = (data: CourseData, participant: Participa
     SEDE_CORSO: data.location,
     PERIODO_CORSO: `${data.parsedCalendar.startDate?.toLocaleDateString('it-IT')} - ${data.parsedCalendar.endDate?.toLocaleDateString('it-IT')}`,
     
-    // Contact and document info
+    // Teacher and contact info (using teacher's email, not participant's)
+    NOME_DOCENTE: data.mainTeacher,
     EMAIL_CONTATTO: data.teacherEmail || 'info@akgroup.it',
     LUOGO: 'Milano',
     DATA_DOCUMENTO: new Date().toLocaleDateString('it-IT'),
