@@ -11,15 +11,20 @@ export interface ConvocationTemplateData {
   
   // Course info
   TITOLO_PERCORSO: string;
+  MATERIA: string; // Added for the template
   ID_CORSO: string;
   ID_SEZIONE: string;
   DENOMINAZIONE_EROGATORE: string;
   ID_SOGGETTO_EROGATORE: string;
   SEDE_CORSO: string;
-  PERIODO_CORSO: string;
+  DATA_INIZIO_CORSO: string; // Separate start date
+  DATA_FINE_CORSO: string;   // Separate end date
+  PERIODO_CORSO: string;     // Keep the range format too
   
   // Teacher and contact info
-  NOME_DOCENTE: string;
+  NOME_DOCENTE: string;      // Full name, not split
+  COGNOME_DOCENTE: string;   // Full surname, not split
+  Teacher_EMAIL: string;     // Match your template placeholder
   EMAIL_CONTATTO: string;
   LUOGO: string;
   DATA_DOCUMENTO: string;
@@ -66,6 +71,11 @@ export const generateConvocationData = (data: CourseData, participant: Participa
     };
   });
 
+  // Parse teacher name - assuming format "Nome Cognome"
+  const teacherParts = data.mainTeacher.split(' ');
+  const teacherNome = teacherParts[0] || '';
+  const teacherCognome = teacherParts.slice(1).join(' ') || '';
+
   const templateData: ConvocationTemplateData = {
     // Participant info
     NOME_BENEFICIARIO: participant.nome,
@@ -74,15 +84,20 @@ export const generateConvocationData = (data: CourseData, participant: Participa
     
     // Course info
     TITOLO_PERCORSO: data.courseName,
+    MATERIA: data.courseName, // Same as course name
     ID_CORSO: data.projectId,
     ID_SEZIONE: data.sectionId,
     DENOMINAZIONE_EROGATORE: 'AK GROUP SRL',
     ID_SOGGETTO_EROGATORE: 'AK001',
     SEDE_CORSO: data.location,
+    DATA_INIZIO_CORSO: data.parsedCalendar.startDate?.toLocaleDateString('it-IT') || '',
+    DATA_FINE_CORSO: data.parsedCalendar.endDate?.toLocaleDateString('it-IT') || '',
     PERIODO_CORSO: `${data.parsedCalendar.startDate?.toLocaleDateString('it-IT')} - ${data.parsedCalendar.endDate?.toLocaleDateString('it-IT')}`,
     
-    // Teacher and contact info (using teacher's email, not participant's)
-    NOME_DOCENTE: data.mainTeacher,
+    // Teacher and contact info
+    NOME_DOCENTE: teacherNome,
+    COGNOME_DOCENTE: teacherCognome,
+    Teacher_EMAIL: data.teacherEmail || 'info@akgroup.it', // Match your template
     EMAIL_CONTATTO: data.teacherEmail || 'info@akgroup.it',
     LUOGO: 'Milano',
     DATA_DOCUMENTO: new Date().toLocaleDateString('it-IT'),
