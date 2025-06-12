@@ -2,6 +2,7 @@
 import { CourseData } from '@/types/course';
 import { generateWordDocument } from './wordTemplateUtils';
 import { generateFADDocument } from './fadTemplateUtils';
+import { generateAllConvocations } from './convocationUtils';
 
 export const generateWordReport = async (data: CourseData) => {
   console.log('Generating Word report with data:', data);
@@ -24,6 +25,18 @@ export const generateFADReport = async (data: CourseData) => {
     console.error('Error in generateFADReport:', error);
     // Fallback message for development
     alert('Per generare il Modulo A FAD, caricare il template in public/templates/MODULO_A_FAD.docx');
+  }
+};
+
+export const generateConvocations = async (data: CourseData) => {
+  console.log('Generating convocations with data:', data);
+  
+  try {
+    await generateAllConvocations(data);
+  } catch (error) {
+    console.error('Error in generateConvocations:', error);
+    // Fallback message for development
+    alert('Per generare le convocazioni, caricare il template in public/templates/CONVOCAZIONE.docx');
   }
 };
 

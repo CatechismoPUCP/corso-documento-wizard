@@ -2,12 +2,12 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Calendar, RotateCcw, Download, Share2, Users, ExternalLink, UserCheck, Wifi } from "lucide-react";
+import { FileText, Calendar, RotateCcw, Download, Share2, Users, ExternalLink, UserCheck, Wifi, Mail } from "lucide-react";
 import { CourseData } from '@/types/course';
 import StudentsContactTable from './StudentsContactTable';
 import { generateAttendanceExcel } from '@/utils/attendanceExcelUtils';
 import { generateExcelCalendar } from '@/utils/calendarExcelUtils';
-import { generateWordReport, generateFADReport, generateSampleData } from '@/utils/otherExportsUtils';
+import { generateWordReport, generateFADReport, generateSampleData, generateConvocations } from '@/utils/otherExportsUtils';
 import {
   generateGoogleCalendarUrl,
   generateOutlookCalendarUrl,
@@ -67,7 +67,7 @@ const Step4Generation = ({ data, onReset }: Step4GenerationProps) => {
                   <p className="text-sm text-yellow-700 mt-1">
                     Per generare documenti Word, caricare i template (.docx) nella cartella <code className="bg-yellow-100 px-1 rounded">public/templates/</code>
                     <br />
-                    Template supportati: calendario.docx, MODULO_A_FAD.docx
+                    Template supportati: calendario.docx, MODULO_A_FAD.docx, CONVOCAZIONE.docx
                     <br />
                     Giorni ufficio: <strong>{data.parsedCalendar.lessons.filter(l => l.location === 'Ufficio').length}</strong>, 
                     Giorni online: <strong>{onlineLessonsCount}</strong>
@@ -130,7 +130,7 @@ const Step4Generation = ({ data, onReset }: Step4GenerationProps) => {
               <Card className="border-2 hover:border-green-300 transition-colors">
                 <CardHeader>
                   <CardTitle className="flex items-center text-green-700">
-                    <UserCheck className="w-6 h-6 mr-2" />
+                    <UserCheckClassName="w-6 h-6 mr-2" />
                     Registro Presenze Excel
                   </CardTitle>
                 </CardHeader>
@@ -161,6 +161,27 @@ const Step4Generation = ({ data, onReset }: Step4GenerationProps) => {
                   <Button onClick={() => generateExcelCalendar(data)} className="w-full bg-purple-600 hover:bg-purple-700">
                     <Calendar className="w-4 h-4 mr-2" />
                     Genera Calendario Excel
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="border-2 hover:border-rose-300 transition-colors">
+                <CardHeader>
+                  <CardTitle className="flex items-center text-rose-700">
+                    <Mail className="w-6 h-6 mr-2" />
+                    Convocazioni Partecipanti
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600 mb-4">
+                    Genera lettere di convocazione personalizzate per tutti i {data.participants.length} partecipanti
+                    con calendario completo e informazioni legali.
+                    <br />
+                    <strong>Richiede: CONVOCAZIONE.docx</strong>
+                  </p>
+                  <Button onClick={() => generateConvocations(data)} className="w-full bg-rose-600 hover:bg-rose-700">
+                    <Mail className="w-4 h-4 mr-2" />
+                    Genera Convocazioni ({data.participants.length})
                   </Button>
                 </CardContent>
               </Card>
