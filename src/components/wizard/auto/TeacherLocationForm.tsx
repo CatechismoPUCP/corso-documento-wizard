@@ -11,15 +11,21 @@ interface TeacherLocationFormProps {
   setLocation: (value: string) => void;
   organization: string;
   setOrganization: (value: string) => void;
+  linkZoom: string;
+  setLinkZoom: (value: string) => void;
+  idRiunione: string;
+  setIdRiunione: (value: string) => void;
+  passcode: string;
+  setPasscode: (value: string) => void;
 }
 
-const TeacherLocationForm = ({ 
-  teacherCF, 
-  setTeacherCF, 
-  location, 
-  setLocation, 
-  organization, 
-  setOrganization 
+const TeacherLocationForm = ({
+  teacherCF, setTeacherCF,
+  location, setLocation,
+  organization, setOrganization,
+  linkZoom, setLinkZoom,
+  idRiunione, setIdRiunione,
+  passcode, setPasscode
 }: TeacherLocationFormProps) => {
   return (
     <>
@@ -58,6 +64,39 @@ const TeacherLocationForm = ({
           onChange={(e) => setOrganization(e.target.value)}
           placeholder="AKG-grup srl"
         />
+      </div>
+
+      <div className="space-y-2 pt-4 border-t">
+        <h3 className="font-medium">Dati per Formazione a Distanza (FAD)</h3>
+        <div>
+          <Label htmlFor="linkZoom">Link Zoom</Label>
+          <Input
+            id="linkZoom"
+            value={linkZoom}
+            onChange={(e) => setLinkZoom(e.target.value)}
+            placeholder="https://us06web.zoom.us/j/..."
+          />
+        </div>
+        <div className="grid md:grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="idRiunione">ID Riunione Zoom</Label>
+            <Input
+              id="idRiunione"
+              value={idRiunione}
+              onChange={(e) => setIdRiunione(e.target.value)}
+              placeholder="834 4346 0156"
+            />
+          </div>
+          <div>
+            <Label htmlFor="passcode">Passcode Zoom</Label>
+            <Input
+              id="passcode"
+              value={passcode}
+              onChange={(e) => setPasscode(e.target.value)}
+              placeholder="083375"
+            />
+          </div>
+        </div>
       </div>
     </>
   );

@@ -53,4 +53,9 @@ export interface CourseData {
   
   // Processed data
   parsedCalendar: ParsedCalendar;
+
+  // Zoom data
+  linkZoom?: string;
+  idRiunione?: string;
+  passcode?: string;
 }

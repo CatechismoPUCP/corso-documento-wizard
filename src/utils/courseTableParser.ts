@@ -145,11 +145,12 @@ export const parseCourseTable = (courseTable: string): ParsedCourseData | null =
 
   console.log('Testo completo dati:', fullDataText);
 
-  // Separa la riga principale dai dati usando le tab
-  const allParts = fullDataText.split('\t');
-  console.log('Tutte le parti separate da tab:', allParts.length, allParts);
+  // Separa la riga principale dai dati usando tab o più spazi come separatori
+  const allParts = fullDataText.split(/\t| {2,}/).map(part => part.trim()).filter(part => part.length > 0);
+  console.log('Tutte le parti separate:', allParts.length, allParts);
 
   if (allParts.length < 4) {
+    console.error('Parsing failed: Not enough parts found.', allParts);
     return null;
   }
 

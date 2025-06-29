@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button";
 import { FileText, Calendar, RotateCcw, Download } from "lucide-react";
 import { CourseData } from '@/types/course';
 import * as XLSX from 'xlsx';
+import PizZip from 'pizzip';
+import Docxtemplater from 'docxtemplater';
+import { saveAs } from 'file-saver';
 
 interface Step4GenerationProps {
   data: CourseData;
@@ -12,10 +15,96 @@ interface Step4GenerationProps {
 }
 
 const Step4Generation = ({ data, onReset }: Step4GenerationProps) => {
-  const generateWordReport = () => {
-    console.log('Generating Word report with data:', data);
-    // TODO: Implement Word generation logic
-    alert('Funzione Word Report in sviluppo');
+  const generateDocument = async (templateName: string, outputName: string, templateData: any) => {
+    try {
+      console.log(`Generating ${outputName} with data:`, data);
+
+      const response = await fetch(`/templates/${templateName}`);
+      if (!response.ok) {
+        throw new Error(`Template ${templateName} not found`);
+      }
+      const templateBlob = await response.arrayBuffer();
+
+      const zip = new PizZip(templateBlob);
+      const doc = new Docxtemplater(zip, {
+        paragraphLoop: true,
+        linebreaks: true,
+      });
+
+      doc.setData(templateData);
+      doc.render();
+
+      const out = doc.getZip().generate({
+        type: 'blob',
+        mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      });
+
+      saveAs(out, `${outputName}_${data.sectionId}.docx`);
+      console.log(`${outputName} generated successfully`);
+
+    } catch (error) {
+      console.error(`Error generating ${outputName}:`, error);
+      alert(`Errore durante la generazione del documento ${outputName}.`);
+    }
+  };
+
+  const generateRegister = () => {
+    const templateData = {
+      ID_PROGETTO: data.projectId,
+      ID_SEZIONE: data.sectionId,
+      NOME_CORSO: data.courseName,
+      SEDE_CORSO: data.location,
+      DATA_INIZIO: data.parsedCalendar.lessons[0]?.date,
+      DATA_FINE: data.parsedCalendar.lessons[data.parsedCalendar.lessons.length - 1]?.date,
+      TOTALE_ORE: data.parsedCalendar.totalHours,
+      OPERATORE: data.operation,
+      NOME_DOCENTE: data.mainTeacher,
+      DATA_VIDIMAZIONE: data.parsedCalendar.lessons[data.parsedCalendar.lessons.length - 1]?.date,
+      participants: data.participants.map(p => ({ NOME_COMPLETO: `${p.cognome} ${p.nome}` })),
+      // TODO: Add complex days/lessons loop logic
+    };
+    generateDocument(`Registro ID_{ID_CORSO}.docx`, 'Registro', templateData);
+  };
+
+  const generateFadModule = () => {
+    const templateData = {
+      DENOMINAZIONE_ENTE: data.operation,
+      SEDE_ACCREDITATA: data.location,
+      PIATTAFORMA: 'Zoom',
+      TITOLO_CORSO: data.courseName,
+      ID_CORSO: data.projectId,
+      ID_SEZIONE: data.sectionId,
+      ORE_FAD: data.parsedCalendar.onlineHours,
+      REFERENTE: data.mainTeacher,
+      EMAIL_REFERENTE: '', // Missing data
+      TELEFONO_REFERENTE: '', // Missing data
+      LINK_ZOOM: data.linkZoom,
+      ID_RIUNIONE: data.idRiunione,
+      PASSCODE: data.passcode,
+      LEZIONI_FAD: data.parsedCalendar.lessons.filter(l => l.location === 'Online').map(l => ({
+        DATA_LEZIONE: l.date,
+        ORARIO_INIZIO: l.startTime,
+        ORARIO_FINE: l.endTime,
+        MATERIA: l.subject,
+        DOCENTE: data.mainTeacher,
+      })),
+      participants: data.participants.map(p => ({ NOME_COMPLETO: `${p.cognome} ${p.nome}`, EMAIL: p.email })),
+    };
+    generateDocument(`modello A fad_{ID_CORSO}.docx`, 'Modulo_FAD', templateData);
+  };
+
+  const generateMinutes = () => {
+    const templateData = {
+      OPERATORE: data.operation,
+      ID_CORSO: data.projectId,
+      ID_SEZIONE: data.sectionId,
+      NOME_DOCENTE: data.mainTeacher,
+      // Supervisore is static in template
+      participants: data.participants.map(p => ({ NOME_COMPLETO: `${p.cognome} ${p.nome}` })),
+      DATA_FINE: data.parsedCalendar.lessons[data.parsedCalendar.lessons.length - 1]?.date,
+      SEDE_CORSO: data.location,
+    };
+    generateDocument(`Verbale -{ID_CORSO} - Corso di formazione {ID-SEZIONE}.docx`, 'Verbale', templateData);
   };
 
   const generateExcelCalendar = () => {
@@ -187,17 +276,52 @@ const Step4Generation = ({ data, onReset }: Step4GenerationProps) => {
               <CardHeader>
                 <CardTitle className="flex items-center text-blue-700">
                   <FileText className="w-6 h-6 mr-2" />
-                  Report Corso Word
+                  Genera Registro
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-gray-600 mb-4">
-                  Genera un documento Word completo con tutti i dettagli del corso, 
-                  lista partecipanti, registri presenza e riepiloghi orari.
+                  Genera il registro didattico e di presenza del corso.
                 </p>
-                <Button onClick={generateWordReport} className="w-full bg-blue-600 hover:bg-blue-700">
+                <Button onClick={generateRegister} className="w-full bg-blue-600 hover:bg-blue-700">
                   <FileText className="w-4 h-4 mr-2" />
-                  Genera Report Word
+                  Genera Registro
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="border-2 hover:border-yellow-300 transition-colors">
+              <CardHeader>
+                <CardTitle className="flex items-center text-yellow-700">
+                  <FileText className="w-6 h-6 mr-2" />
+                  Genera Modulo FAD
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-600 mb-4">
+                  Genera il modulo per le attività di Formazione a Distanza.
+                </p>
+                <Button onClick={generateFadModule} className="w-full bg-yellow-600 hover:bg-yellow-700">
+                  <FileText className="w-4 h-4 mr-2" />
+                  Genera Modulo FAD
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="border-2 hover:border-purple-300 transition-colors">
+              <CardHeader>
+                <CardTitle className="flex items-center text-purple-700">
+                  <FileText className="w-6 h-6 mr-2" />
+                  Genera Verbale
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-600 mb-4">
+                  Genera il verbale per il rilascio dell'attestato.
+                </p>
+                <Button onClick={generateMinutes} className="w-full bg-purple-600 hover:bg-purple-700">
+                  <FileText className="w-4 h-4 mr-2" />
+                  Genera Verbale
                 </Button>
               </CardContent>
             </Card>

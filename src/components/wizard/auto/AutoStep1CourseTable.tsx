@@ -20,13 +20,16 @@ const AutoStep1CourseTable = ({ data, updateData, onNext }: AutoStep1CourseTable
   const [teacherCF, setTeacherCF] = useState(data.teacherCF);
   const [location, setLocation] = useState(data.location);
   const [organization, setOrganization] = useState('AKG-grup srl');
+  const [linkZoom, setLinkZoom] = useState(data.linkZoom || '');
+  const [idRiunione, setIdRiunione] = useState(data.idRiunione || '');
+  const [passcode, setPasscode] = useState(data.passcode || '');
   const [isParsed, setIsParsed] = useState(false);
 
   const handleParseCourseTable = () => {
     const parsedData = parseCourseTable(courseTable);
     
-    if (!parsedData) {
-      alert('Formato tabella non valido. Assicurati di aver copiato correttamente la tabella.');
+    if (!parsedData || !parsedData.projectId || !parsedData.sectionId || !parsedData.courseName) {
+      alert('Impossibile analizzare la tabella. Controlla il formato e assicurati che tutte le colonne necessarie siano presenti.');
       return;
     }
 
@@ -54,7 +57,10 @@ const AutoStep1CourseTable = ({ data, updateData, onNext }: AutoStep1CourseTable
       teacherCF,
       operation: organization,
       calendar,
-      parsedCalendar
+      parsedCalendar,
+      linkZoom,
+      idRiunione,
+      passcode
     });
 
     setIsParsed(true);
@@ -106,6 +112,12 @@ const AutoStep1CourseTable = ({ data, updateData, onNext }: AutoStep1CourseTable
             setLocation={setLocation}
             organization={organization}
             setOrganization={setOrganization}
+            linkZoom={linkZoom}
+            setLinkZoom={setLinkZoom}
+            idRiunione={idRiunione}
+            setIdRiunione={setIdRiunione}
+            passcode={passcode}
+            setPasscode={setPasscode}
           />
 
           <div className="flex justify-end">
