@@ -1,0 +1,4 @@
+id_calendario|nome_calendario|descrizione|data_creazione
+1|Eventi Aziendali|Calendario aziendale|2024-01-10
+2|Compleanni|Date di compleanno|2024-03-15
+3|Festività Pubbliche|Festività nazionali|2024-05-01

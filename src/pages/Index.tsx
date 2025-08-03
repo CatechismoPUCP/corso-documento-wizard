@@ -33,7 +33,7 @@ const Index = () => {
           </div>
 
           {/* Wizard Type Selection */}
-          <div className="grid md:grid-cols-2 gap-8 mb-12">
+          <div className="grid md:grid-cols-3 gap-6 mb-12">
             <Card className="hover:shadow-lg transition-shadow cursor-pointer group">
               <CardHeader className="text-center">
                 <Zap className="w-12 h-12 mx-auto text-green-500 mb-4 group-hover:scale-110 transition-transform" />
@@ -71,6 +71,8 @@ const Index = () => {
                 </Button>
               </CardContent>
             </Card>
+
+
           </div>
 
           {/* Features Grid */}

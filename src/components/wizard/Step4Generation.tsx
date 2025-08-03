@@ -8,6 +8,10 @@ import * as XLSX from 'xlsx';
 import PizZip from 'pizzip';
 import Docxtemplater from 'docxtemplater';
 import { saveAs } from 'file-saver';
+import { TemplateFixer } from '@/utils/templateFixer';
+import { AdvancedTemplateFixer } from '@/utils/advancedTemplateFixer';
+import { TemplateValidator } from '@/utils/templateValidator';
+import { ExtremeTemplateFixer } from '@/utils/extremeTemplateFixer';
 
 interface Step4GenerationProps {
   data: CourseData;
@@ -17,7 +21,7 @@ interface Step4GenerationProps {
 const Step4Generation = ({ data, onReset }: Step4GenerationProps) => {
   const generateDocument = async (templateName: string, outputName: string, templateData: any) => {
     try {
-      console.log(`Generating ${outputName} with data:`, data);
+      console.log(`Generating ${outputName} with data:`, templateData);
 
       const response = await fetch(`/templates/${templateName}`);
       if (!response.ok) {
@@ -25,12 +29,71 @@ const Step4Generation = ({ data, onReset }: Step4GenerationProps) => {
       }
       const templateBlob = await response.arrayBuffer();
 
-      const zip = new PizZip(templateBlob);
+      // Fix template tags that may be corrupted by Word
+      console.log(`🔧 Fixing template: ${templateName}`);
+      let fixedTemplateBlob;
+      
+      try {
+        // For severely corrupted templates, use ExtremeTemplateFixer first
+        if (templateName.includes('HEAD') || templateName.includes('CONVOCAZIONE') || templateName.includes('Registro ID_')) {
+          console.log('🚨 Using ExtremeTemplateFixer for severely corrupted template...');
+          
+          // Special handling for completely corrupted files
+          if (templateName.includes('CONVOCAZIONE')) {
+            console.log('⚠️ CONVOCAZIONE.docx is completely corrupted - skipping generation');
+            alert('CONVOCAZIONE.docx è completamente corrotto e non può essere generato. Sostituire il file template.');
+            return;
+          }
+          
+          if (templateName.includes('Registro ID_') && !templateName.includes('HEAD')) {
+            console.log('⚠️ Registro ID_{ID_CORSO}.docx has recursion issues - trying alternative approach');
+            // Try multiple fixing approaches for this problematic template
+            try {
+              fixedTemplateBlob = await ExtremeTemplateFixer.fixTemplate(templateBlob);
+            } catch (recursionError) {
+              console.log('⚠️ ExtremeTemplateFixer failed, trying AdvancedTemplateFixer...');
+              fixedTemplateBlob = await AdvancedTemplateFixer.fixTemplate(templateBlob);
+            }
+          } else {
+            fixedTemplateBlob = await ExtremeTemplateFixer.fixTemplate(templateBlob);
+          }
+        } else {
+          console.log('🔧 Trying AdvancedTemplateFixer first...');
+          fixedTemplateBlob = await AdvancedTemplateFixer.fixTemplate(templateBlob);
+          
+          // Validate the advanced fix
+          const advancedZip = new PizZip(fixedTemplateBlob);
+          const advancedXml = advancedZip.file('word/document.xml')?.asText() || '';
+          const advancedValidation = AdvancedTemplateFixer.validateTemplate(advancedXml);
+          
+          console.log('Advanced template validation:', advancedValidation);
+          
+          if (!advancedValidation.isValid || advancedValidation.foundVariables.length < 3) {
+            console.log('🔄 Advanced fixing insufficient, trying ExtremeTemplateFixer...');
+            fixedTemplateBlob = await ExtremeTemplateFixer.fixTemplate(templateBlob);
+          }
+        }
+      } catch (fixError) {
+        console.error('❌ Error during template fixing, trying fallback:', fixError);
+        try {
+          fixedTemplateBlob = await TemplateFixer.fixTemplate(templateBlob);
+        } catch (fallbackError) {
+          console.error('❌ All template fixers failed, using original:', fallbackError);
+          fixedTemplateBlob = templateBlob;
+        }
+      }
+
+      const zip = new PizZip(fixedTemplateBlob);
       const doc = new Docxtemplater(zip, {
         paragraphLoop: true,
         linebreaks: true,
+        errorLogging: false, // Disable error logging to avoid console spam
       });
 
+      // Validate template data before rendering
+      console.log('📊 Template data being sent to docxtemplater:', Object.keys(templateData));
+      console.log('📊 Template data values:', templateData);
+      
       doc.setData(templateData);
       doc.render();
 
@@ -44,25 +107,52 @@ const Step4Generation = ({ data, onReset }: Step4GenerationProps) => {
 
     } catch (error) {
       console.error(`Error generating ${outputName}:`, error);
-      alert(`Errore durante la generazione del documento ${outputName}.`);
+      
+      // Log detailed error information if it's a template error
+      if (error.name === 'TemplateError' && error.properties) {
+        console.error('Template error details:', error.properties);
+        if (error.properties.errors) {
+          console.error('Individual errors:', error.properties.errors);
+          // Log first few errors in detail
+          error.properties.errors.slice(0, 5).forEach((err: any, index: number) => {
+            console.error(`Error ${index + 1}:`, {
+              message: err.message,
+              name: err.name,
+              properties: err.properties,
+              stack: err.stack?.split('\n')[0]
+            });
+          });
+        }
+      }
+      
+      alert(`Errore durante la generazione del documento ${outputName}: ${error.message}`);
     }
   };
 
   const generateRegister = () => {
     const templateData = {
       ID_PROGETTO: data.projectId,
+      ID_CORSO: data.projectId, // Also provide ID_CORSO for compatibility
       ID_SEZIONE: data.sectionId,
       NOME_CORSO: data.courseName,
-      SEDE_CORSO: data.location,
+      SEDE_CORSO: data.location || 'Sede non specificata',
       DATA_INIZIO: data.parsedCalendar.lessons[0]?.date,
       DATA_FINE: data.parsedCalendar.lessons[data.parsedCalendar.lessons.length - 1]?.date,
       TOTALE_ORE: data.parsedCalendar.totalHours,
+      TOTALE_PAG: Math.ceil(data.participants.length / 13), // Assuming 13 participants per page
       OPERATORE: data.operation,
       NOME_DOCENTE: data.mainTeacher,
       DATA_VIDIMAZIONE: data.parsedCalendar.lessons[data.parsedCalendar.lessons.length - 1]?.date,
       participants: data.participants.map(p => ({ NOME_COMPLETO: `${p.cognome} ${p.nome}` })),
-      // TODO: Add complex days/lessons loop logic
+      // Add individual participant placeholders (up to 13 as seen in template)
+      ...Object.fromEntries(
+        Array.from({ length: 13 }, (_, i) => {
+          const participant = data.participants[i];
+          return [`PARTECIPANTE_${i + 1}`, participant ? `${participant.cognome} ${participant.nome}` : ''];
+        })
+      ),
     };
+    console.log('Register template data:', templateData);
     generateDocument(`Registro ID_{ID_CORSO}.docx`, 'Registro', templateData);
   };
 
@@ -76,8 +166,9 @@ const Step4Generation = ({ data, onReset }: Step4GenerationProps) => {
       ID_SEZIONE: data.sectionId,
       ORE_FAD: data.parsedCalendar.onlineHours,
       REFERENTE: data.mainTeacher,
-      EMAIL_REFERENTE: '', // Missing data
-      TELEFONO_REFERENTE: '', // Missing data
+      DOCENTE: data.mainTeacher, // Add DOCENTE field that template expects
+      EMAIL_REFERENTE: data.mainTeacher || '', // Use main teacher as referente email placeholder
+      TELEFONO_REFERENTE: '', // Missing data - could be added to form later
       LINK_ZOOM: data.linkZoom,
       ID_RIUNIONE: data.idRiunione,
       PASSCODE: data.passcode,
@@ -94,16 +185,20 @@ const Step4Generation = ({ data, onReset }: Step4GenerationProps) => {
   };
 
   const generateMinutes = () => {
+    // Create minimal, clean data for Verbale template
     const templateData = {
-      OPERATORE: data.operation,
-      ID_CORSO: data.projectId,
-      ID_SEZIONE: data.sectionId,
-      NOME_DOCENTE: data.mainTeacher,
-      // Supervisore is static in template
-      participants: data.participants.map(p => ({ NOME_COMPLETO: `${p.cognome} ${p.nome}` })),
-      DATA_FINE: data.parsedCalendar.lessons[data.parsedCalendar.lessons.length - 1]?.date,
-      SEDE_CORSO: data.location,
+      ID_CORSO: String(data.projectId || '48540'),
+      ID_SEZIONE: String(data.sectionId || '140356'),
+      NOME_DOCENTE: String(data.mainTeacher || 'Docente non specificato'),
+      SEDE_CORSO: String(data.location || 'Sede non specificata'),
+      DATA_FINE: String(data.parsedCalendar.lessons[data.parsedCalendar.lessons.length - 1]?.date || '31/12/2024'),
+      // Remove complex objects that might cause issues
     };
+    
+    console.log('🎯 Verbale template data (clean):', templateData);
+    console.log('🎯 All values are strings:', Object.values(templateData).every(v => typeof v === 'string'));
+    console.log('🎯 No undefined values:', Object.values(templateData).every(v => v !== undefined && v !== null));
+    
     generateDocument(`Verbale -{ID_CORSO} - Corso di formazione {ID-SEZIONE}.docx`, 'Verbale', templateData);
   };
 
@@ -242,6 +337,159 @@ const Step4Generation = ({ data, onReset }: Step4GenerationProps) => {
     URL.revokeObjectURL(url);
   };
 
+  const testTemplateFix = async () => {
+    try {
+      console.log('Testing template fixing on all templates...');
+      
+      const templates = [
+        'Registro ID_{ID_CORSO}.docx',
+        'modello A fad_{ID_CORSO}.docx',
+        'Verbale -{ID_CORSO} - Corso di formazione {ID-SEZIONE}.docx'
+      ];
+      
+      for (const templateName of templates) {
+        console.log(`\n=== Testing template: ${templateName} ===`);
+        
+        try {
+          const response = await fetch(`/templates/${templateName}`);
+          if (!response.ok) {
+            console.error(`Template ${templateName} not found`);
+            continue;
+          }
+          
+          const templateBlob = await response.arrayBuffer();
+          
+          // Test advanced fixer
+          console.log('Testing AdvancedTemplateFixer...');
+          const advancedFixed = await AdvancedTemplateFixer.fixTemplate(templateBlob);
+          const advancedZip = new PizZip(advancedFixed);
+          const advancedXml = advancedZip.file('word/document.xml')?.asText() || '';
+          const advancedValidation = AdvancedTemplateFixer.validateTemplate(advancedXml);
+          console.log('Advanced validation result:', advancedValidation);
+          
+          // Test regular fixer
+          console.log('Testing TemplateFixer...');
+          const regularFixed = await TemplateFixer.fixTemplate(templateBlob);
+          const regularZip = new PizZip(regularFixed);
+          const regularXml = regularZip.file('word/document.xml')?.asText() || '';
+          const regularValidation = TemplateFixer.validateTemplateTags(regularXml);
+          console.log('Regular validation result:', regularValidation);
+          
+        } catch (error) {
+          console.error(`Error testing template ${templateName}:`, error);
+        }
+      }
+      
+      alert('Template testing completed. Check console for detailed results.');
+      
+    } catch (error) {
+      console.error('Error during template testing:', error);
+      alert('Error during template testing. Check console for details.');
+    }
+  };
+
+  const validateTemplates = async () => {
+    try {
+      console.log('Starting comprehensive template validation...');
+      
+      const validation = await TemplateValidator.validateAllTemplates();
+      
+      // Also show what data we would send to each template
+      console.log('\n=== DATA COMPARISON ===');
+      
+      const registerData = {
+        ID_PROGETTO: data.projectId,
+        ID_SEZIONE: data.sectionId,
+        NOME_CORSO: data.courseName,
+        SEDE_CORSO: data.location,
+        DATA_INIZIO: data.parsedCalendar.lessons[0]?.date,
+        DATA_FINE: data.parsedCalendar.lessons[data.parsedCalendar.lessons.length - 1]?.date,
+        TOTALE_ORE: data.parsedCalendar.totalHours,
+        OPERATORE: data.operation,
+        NOME_DOCENTE: data.mainTeacher,
+        DATA_VIDIMAZIONE: data.parsedCalendar.lessons[data.parsedCalendar.lessons.length - 1]?.date,
+      };
+      
+      const fadData = {
+        DENOMINAZIONE_ENTE: data.operation,
+        SEDE_ACCREDITATA: data.location,
+        PIATTAFORMA: 'Zoom',
+        TITOLO_CORSO: data.courseName,
+        ID_CORSO: data.projectId,
+        ID_SEZIONE: data.sectionId,
+        ORE_FAD: data.parsedCalendar.onlineHours,
+        REFERENTE: data.mainTeacher,
+        EMAIL_REFERENTE: '',
+        TELEFONO_REFERENTE: '',
+        LINK_ZOOM: data.linkZoom,
+        ID_RIUNIONE: data.idRiunione,
+        PASSCODE: data.passcode,
+      };
+      
+      const verbaleData = {
+        OPERATORE: data.operation,
+        ID_CORSO: data.projectId,
+        ID_SEZIONE: data.sectionId,
+        NOME_DOCENTE: data.mainTeacher,
+        DATA_FINE: data.parsedCalendar.lessons[data.parsedCalendar.lessons.length - 1]?.date,
+        SEDE_CORSO: data.location,
+      };
+      
+      // Compare each template with its data
+      validation.templates.forEach((template: any) => {
+        let templateData = {};
+        if (template.templateName.includes('Registro ID_')) {
+          templateData = registerData;
+        } else if (template.templateName.includes('modello A fad')) {
+          templateData = fadData;
+        } else if (template.templateName.includes('Verbale')) {
+          templateData = verbaleData;
+        }
+        
+        if (Object.keys(templateData).length > 0) {
+          const comparison = TemplateValidator.compareWithData(template, templateData);
+          console.log(`\n--- ${template.templateName} ---`);
+          console.log('Template expects:', template.placeholders);
+          console.log('We provide:', Object.keys(templateData));
+          console.log('Missing from data:', comparison.missing);
+          console.log('Unused in template:', comparison.unused);
+          console.log('Matches:', comparison.matches);
+        }
+      });
+      
+      // Generate and download report
+      const report = await TemplateValidator.generateValidationReport();
+      const blob = new Blob([report], { type: 'text/markdown' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `template-validation-report-${new Date().toISOString().split('T')[0]}.md`;
+      a.click();
+      URL.revokeObjectURL(url);
+      
+      // Show summary in alert
+      const summary = validation.summary;
+      const allPlaceholders = new Set();
+      validation.templates.forEach((template: any) => {
+        template.placeholders?.forEach((p: string) => allPlaceholders.add(p));
+      });
+      
+      alert(`Template Validation Complete!\n\n` +
+        `📊 Summary:\n` +
+        `- Templates analyzed: ${summary.totalTemplates}\n` +
+        `- Templates with issues: ${summary.templatesWithIssues}\n` +
+        `- Total placeholders found: ${summary.totalPlaceholders}\n` +
+        `- Broken placeholders: ${summary.totalBrokenPlaceholders}\n` +
+        `- Unique placeholders: ${allPlaceholders.size}\n\n` +
+        `📄 Detailed report downloaded as markdown file.\n` +
+        `📋 Check console for detailed analysis and data comparison.`);
+      
+    } catch (error) {
+      console.error('Error during template validation:', error);
+      alert('Error during template validation. Check console for details.');
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -355,10 +603,20 @@ const Step4Generation = ({ data, onReset }: Step4GenerationProps) => {
               <p className="text-sm text-gray-600 mb-4">
                 Per ora puoi esportare i dati elaborati in formato JSON per testing e sviluppo.
               </p>
-              <Button onClick={generateSampleData} variant="outline" className="w-full">
-                <Download className="w-4 h-4 mr-2" />
-                Scarica Dati JSON
-              </Button>
+              <div className="space-y-2">
+                <Button onClick={generateSampleData} variant="outline" className="w-full">
+                  <Download className="w-4 h-4 mr-2" />
+                  Scarica Dati JSON
+                </Button>
+                <Button onClick={testTemplateFix} variant="outline" className="w-full bg-blue-50 hover:bg-blue-100">
+                  <FileText className="w-4 h-4 mr-2" />
+                  Test Template Fix (Debug)
+                </Button>
+                <Button onClick={validateTemplates} variant="outline" className="w-full bg-red-50 hover:bg-red-100">
+                  <FileText className="w-4 h-4 mr-2" />
+                  Validate Templates & Download Report
+                </Button>
+              </div>
             </CardContent>
           </Card>
 

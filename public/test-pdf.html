@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PDF Text Extraction Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+</head>
+<body>
+    <h1>PDF Text Extraction Test</h1>
+    <input type="file" id="pdfFile" accept=".pdf">
+    <button onclick="extractText()">Extract Text</button>
+    <div id="output" style="white-space: pre-wrap; font-family: monospace; margin-top: 20px; border: 1px solid #ccc; padding: 10px;"></div>
+
+    <script>
+        // Set the worker source
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        async function extractText() {
+            const fileInput = document.getElementById('pdfFile');
+            const output = document.getElementById('output');
+            
+            if (!fileInput.files[0]) {
+                alert('Please select a PDF file');
+                return;
+            }
+
+            try {
+                const file = fileInput.files[0];
+                console.log('Processing file:', file.name);
+                
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                
+                let fullText = '';
+                
+                for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                    const page = await pdf.getPage(pageNum);
+                    const textContent = await page.getTextContent();
+                    
+                    const pageText = textContent.items
+                        .map(item => item.str)
+                        .join(' ');
+                    
+                    fullText += `=== PAGE ${pageNum} ===\n${pageText}\n\n`;
+                }
+                
+                output.textContent = fullText;
+                console.log('Extracted text:', fullText);
+                
+                // Also analyze the text for participant patterns
+                analyzeParticipants(fullText);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                output.textContent = 'Error: ' + error.message;
+            }
+        }
+
+        function analyzeParticipants(text) {
+            console.log('\n=== PARTICIPANT ANALYSIS ===');
+            
+            const lines = text.split('\n').filter(line => line.trim());
+            console.log('Total lines:', lines.length);
+            
+            // Show first 30 lines
+            console.log('\n=== FIRST 30 LINES ===');
+            lines.slice(0, 30).forEach((line, i) => {
+                console.log(`${i + 1}: "${line.trim()}"`);
+            });
+            
+            // Look for name patterns
+            console.log('\n=== NAME PATTERN ANALYSIS ===');
+            const namePattern1 = /([A-Z][A-Z\s]+),\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/;
+            const namePattern2 = /([A-Z]+)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/;
+            const namePattern3 = /(\w+),\s*(\w+)/;
+            
+            lines.forEach((line, i) => {
+                const trimmed = line.trim();
+                if (namePattern1.test(trimmed)) {
+                    console.log(`Pattern 1 match on line ${i + 1}: "${trimmed}"`);
+                }
+                if (namePattern2.test(trimmed)) {
+                    console.log(`Pattern 2 match on line ${i + 1}: "${trimmed}"`);
+                }
+                if (namePattern3.test(trimmed)) {
+                    console.log(`Pattern 3 match on line ${i + 1}: "${trimmed}"`);
+                }
+            });
+            
+            // Look for email patterns
+            console.log('\n=== EMAIL PATTERN ANALYSIS ===');
+            const emailPattern = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/;
+            lines.forEach((line, i) => {
+                const trimmed = line.trim();
+                if (emailPattern.test(trimmed)) {
+                    console.log(`Email found on line ${i + 1}: "${trimmed}"`);
+                }
+            });
+            
+            // Look for phone patterns
+            console.log('\n=== PHONE PATTERN ANALYSIS ===');
+            const phonePattern = /(\+?39\s*)?([0-9\s\-\.]{8,15})/;
+            lines.forEach((line, i) => {
+                const trimmed = line.trim();
+                if (phonePattern.test(trimmed)) {
+                    console.log(`Phone found on line ${i + 1}: "${trimmed}"`);
+                }
+            });
+        }
+    </script>
+</body>
+</html>

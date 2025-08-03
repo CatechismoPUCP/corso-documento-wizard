@@ -1,0 +1,6 @@
+id_partecipante|nome|email|id_calendario
+1|Mario Rossi|mario@email.com|1
+2|Luca Bianchi|luca@email.com|1
+3|Anna Verdi|anna@email.com|2
+4|Sara Neri|sara@email.com|3
+5|Paolo Blu|paolo@email.com|2

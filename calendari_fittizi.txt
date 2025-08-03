@@ -1,0 +1,11 @@
+id_calendario|nome_calendario|descrizione|data_creazione
+1|Eventi Aziendali|Calendario aziendale|2024-01-10
+2|Compleanni|Date di compleanno|2024-03-15
+3|Festività Pubbliche|Festività nazionali|2024-05-01
+4|Riunioni Team|Incontri settimanali del team|2024-06-12
+5|Formazione|Corsi di formazione professionale|2024-02-28
+6|Progetti|Scadenze dei progetti|2024-04-20
+7|Vacanze|Pianificazione ferie|2024-01-15
+8|Eventi Sociali|Attività ricreative|2024-07-05
+9|Conferenze|Conferenze del settore|2024-03-22
+10|Manutenzione|Manutenzione programmata|2024-05-18
