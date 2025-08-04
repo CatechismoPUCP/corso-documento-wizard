@@ -29,6 +29,24 @@ const Step4Generation = ({ data, onReset }: Step4GenerationProps) => {
       const doc = new Docxtemplater(zip, {
         paragraphLoop: true,
         linebreaks: true,
+        delimiters: {
+          start: '{{',
+          end: '}}',
+        },
+        parser: (tag) => {
+          return {
+            get: (scope) => {
+              if (tag === '.') {
+                return scope;
+              }
+              if (tag.startsWith('#') || tag.startsWith('/')) {
+                const tagName = tag.substring(1);
+                return scope[tagName];
+              }
+              return scope[tag];
+            },
+          };
+        },
       });
 
       doc.setData(templateData);
@@ -49,22 +67,42 @@ const Step4Generation = ({ data, onReset }: Step4GenerationProps) => {
   };
 
   const generateRegister = () => {
+    console.log('🏫 Generating Registro with updated template data...');
+    
+    // Calculate total pages (estimate based on lessons and participants)
+    const totalPages = Math.max(1, Math.ceil((data.parsedCalendar.lessons.length + data.participants.length) / 10));
+    
+    // Create participant placeholders (PARTECIPANTE_1 through PARTECIPANTE_13)
+    const participantData: { [key: string]: string } = {};
+    for (let i = 1; i <= 13; i++) {
+      const participant = data.participants[i - 1];
+      participantData[`PARTECIPANTE_${i}`] = participant 
+        ? `${participant.cognome} ${participant.nome}` 
+        : '';
+    }
+    
     const templateData = {
-      ID_PROGETTO: data.projectId,
-      ID_SEZIONE: data.sectionId,
-      NOME_CORSO: data.courseName,
-      SEDE_CORSO: data.location,
-      DATA_INIZIO: data.parsedCalendar.lessons[0]?.date,
-      DATA_FINE: data.parsedCalendar.lessons[data.parsedCalendar.lessons.length - 1]?.date,
-      TOTALE_ORE: data.parsedCalendar.totalHours,
-      OPERATORE: data.operation,
-      NOME_DOCENTE: data.mainTeacher,
-      DATA_VIDIMAZIONE: data.parsedCalendar.lessons[data.parsedCalendar.lessons.length - 1]?.date,
-      participants: data.participants.map(p => ({ NOME_COMPLETO: `${p.cognome} ${p.nome}` })),
-      // TODO: Add complex days/lessons loop logic
+      ID_PROGETTO: data.projectId || '',
+      ID_SEZIONE: data.sectionId || '',
+      NOME_CORSO: data.courseName || '',
+      SEDE_CORSO: data.location || '',
+      DATA_INIZIO: data.parsedCalendar.lessons.length > 0 
+        ? data.parsedCalendar.lessons[0].date 
+        : '',
+      DATA_FINE: data.parsedCalendar.lessons.length > 0 
+        ? data.parsedCalendar.lessons[data.parsedCalendar.lessons.length - 1].date 
+        : '',
+      TOTALE_ORE: data.parsedCalendar.totalHours || 0,
+      NOME_DOCENTE: data.mainTeacher || '',
+      TOTALE_PAG: totalPages,
+      ...participantData
     };
-    generateDocument(`Registro ID_{ID_CORSO}.docx`, 'Registro', templateData);
+    
+    console.log('📋 Template data for Registro:', templateData);
+    generateDocument('Registro.docx', 'Registro', templateData);
   };
+
+
 
   const generateFadModule = () => {
     const templateData = {
@@ -90,7 +128,7 @@ const Step4Generation = ({ data, onReset }: Step4GenerationProps) => {
       })),
       participants: data.participants.map(p => ({ NOME_COMPLETO: `${p.cognome} ${p.nome}`, EMAIL: p.email })),
     };
-    generateDocument(`modello A fad_{ID_CORSO}.docx`, 'Modulo_FAD', templateData);
+    generateDocument('modello A fad.docx', 'Modulo_FAD', templateData);
   };
 
   const generateMinutes = () => {
@@ -104,7 +142,7 @@ const Step4Generation = ({ data, onReset }: Step4GenerationProps) => {
       DATA_FINE: data.parsedCalendar.lessons[data.parsedCalendar.lessons.length - 1]?.date,
       SEDE_CORSO: data.location,
     };
-    generateDocument(`Verbale -{ID_CORSO} - Corso di formazione {ID-SEZIONE}.docx`, 'Verbale', templateData);
+    generateDocument('Verbale.docx', 'Verbale', templateData);
   };
 
   const generateExcelCalendar = () => {
