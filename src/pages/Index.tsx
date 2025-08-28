@@ -1,4 +1,7 @@
-
+/**
+ * Main landing page component that provides wizard selection interface.
+ * Users can choose between automatic (fast) or manual (detailed) course creation workflows.
+ */
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,13 +9,19 @@ import { ChevronRight, Users, Calendar, FileText, Download, Zap, Settings } from
 import CourseWizard from '@/components/CourseWizard';
 import AutomaticWizard from '@/components/AutomaticWizard';
 
+/**
+ * Main Index component that handles wizard selection and routing.
+ * Provides a clean interface for users to choose their preferred workflow.
+ */
 const Index = () => {
   const [showWizard, setShowWizard] = useState<'manual' | 'automatic' | null>(null);
 
+  // Route to manual wizard
   if (showWizard === 'manual') {
     return <CourseWizard onBack={() => setShowWizard(null)} />;
   }
 
+  // Route to automatic wizard
   if (showWizard === 'automatic') {
     return <AutomaticWizard onBack={() => setShowWizard(null)} />;
   }

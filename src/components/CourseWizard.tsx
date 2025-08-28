@@ -1,9 +1,9 @@
-
+/**
+ * Manual Course Wizard component that provides step-by-step course creation.
+ * Uses the WizardBase component for consistent UI and eliminates code duplication.
+ */
 import React, { useState } from 'react';
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import WizardBase, { WizardStep } from './wizard/WizardBase';
 import Step1CourseData from './wizard/Step1CourseData';
 import Step2Participants from './wizard/Step2Participants';
 import Step3Summary from './wizard/Step3Summary';
@@ -14,6 +14,10 @@ interface CourseWizardProps {
   onBack: () => void;
 }
 
+/**
+ * Manual Course Wizard - provides detailed step-by-step course creation
+ * with full control over all course parameters and settings.
+ */
 const CourseWizard = ({ onBack }: CourseWizardProps) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [courseData, setCourseData] = useState<CourseData>({
@@ -36,29 +40,33 @@ const CourseWizard = ({ onBack }: CourseWizardProps) => {
     }
   });
 
-  const steps = [
+  const steps: WizardStep[] = [
     { number: 1, title: "Dati del Corso", description: "Informazioni base e calendario" },
     { number: 2, title: "Partecipanti", description: "Lista corsisti" },
     { number: 3, title: "Riepilogo", description: "Verifica dati estratti" },
     { number: 4, title: "Generazione", description: "Crea documenti" }
   ];
 
+  /** Updates course data with partial updates */
   const updateCourseData = (updates: Partial<CourseData>) => {
     setCourseData(prev => ({ ...prev, ...updates }));
   };
 
+  /** Advances to the next step if not at the end */
   const nextStep = () => {
-    if (currentStep < 4) {
+    if (currentStep < steps.length) {
       setCurrentStep(prev => prev + 1);
     }
   };
 
+  /** Goes back to the previous step if not at the beginning */
   const prevStep = () => {
     if (currentStep > 1) {
       setCurrentStep(prev => prev - 1);
     }
   };
 
+  /** Resets wizard to initial state */
   const resetWizard = () => {
     setCurrentStep(1);
     setCourseData({
@@ -82,6 +90,7 @@ const CourseWizard = ({ onBack }: CourseWizardProps) => {
     });
   };
 
+  /** Renders the appropriate step component based on current step */
   const renderStep = () => {
     switch (currentStep) {
       case 1:
@@ -98,55 +107,15 @@ const CourseWizard = ({ onBack }: CourseWizardProps) => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <Button variant="outline" onClick={onBack}>
-              <ChevronLeft className="w-4 h-4 mr-2" />
-              Torna alla Home
-            </Button>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Wizard Generazione Corso
-            </h1>
-          </div>
-
-          {/* Progress Steps */}
-          <Card className="mb-8">
-            <CardHeader>
-              <div className="flex items-center justify-between mb-4">
-                <CardTitle>Passaggio {currentStep} di 4</CardTitle>
-                <span className="text-sm text-gray-500">
-                  {Math.round((currentStep / 4) * 100)}% completato
-                </span>
-              </div>
-              <Progress value={(currentStep / 4) * 100} className="mb-4" />
-              <div className="grid grid-cols-4 gap-4">
-                {steps.map((step) => (
-                  <div
-                    key={step.number}
-                    className={`text-center p-3 rounded-lg border ${
-                      step.number === currentStep
-                        ? 'bg-blue-50 border-blue-300 text-blue-700'
-                        : step.number < currentStep
-                        ? 'bg-green-50 border-green-300 text-green-700'
-                        : 'bg-gray-50 border-gray-200 text-gray-500'
-                    }`}
-                  >
-                    <div className="font-semibold text-sm">{step.title}</div>
-                    <div className="text-xs mt-1">{step.description}</div>
-                  </div>
-                ))}
-              </div>
-            </CardHeader>
-          </Card>
-
-          {/* Step Content */}
-          {renderStep()}
-        </div>
-      </div>
-    </div>
+    <WizardBase
+      currentStep={currentStep}
+      steps={steps}
+      title="Wizard Generazione Corso"
+      onBack={onBack}
+      theme="blue"
+    >
+      {renderStep()}
+    </WizardBase>
   );
 };
 
